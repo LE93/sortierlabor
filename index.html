@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font-family:system-ui,sans-serif;font-size:14px}img{max-width:100%}</style>
+</head>
+<body>
+<title>Sortierlabor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Werkbank – links Code, rechts Balkenbühne mit Steuerung, darunter Ausgabe */
+:root{
+  --bg:#f3f5f4; --panel:#ffffff; --ink:#1d2a2a; --muted:#5d6b6a; --line:#d5dddb;
+  --bar:#3f7f86; --cmp:#e0a21b; --swap:#2f6fd6; --set:#d2453a; --code-bg:#fbfcfc; --ok:#2e8b57; --sel:#d7e6f7; --hl:#fff1c9; --k-kw:#a626a4; --k-fn:#2f6fd6; --k-num:#b35a00; --k-str:#2e7d32;
+  --ui:"Atkinson Hyperlegible",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141a1a; --panel:#1c2424; --ink:#e4ecea; --muted:#9aaaa8; --line:#2f3b3b;
+  --bar:#5fa6ad; --cmp:#f0b93a; --swap:#6a9cf0; --set:#ef6a5e; --code-bg:#182020; --ok:#5cc58a; --sel:#2c3e55; --hl:#3a3420; --k-kw:#d38be0; --k-fn:#7fb0f5; --k-num:#f0a35e; --k-str:#8fcf8f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a1a; --panel:#1c2424; --ink:#e4ecea; --muted:#9aaaa8; --line:#2f3b3b;
+  --bar:#5fa6ad; --cmp:#f0b93a; --swap:#6a9cf0; --set:#ef6a5e; --code-bg:#182020; --ok:#5cc58a; --sel:#2c3e55; --hl:#3a3420; --k-kw:#d38be0; --k-fn:#7fb0f5; --k-num:#f0a35e; --k-str:#8fcf8f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:15px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px}
+h1{font-size:1.5rem;margin:0;text-wrap:balance}
+header p{margin:0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0;align-content:start}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label.small{font-size:.85rem;color:var(--muted);letter-spacing:.02em}
+select,button,input[type=range]{font-family:var(--ui);font-size:.95rem}
+select{padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+button{padding:7px 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--bar)}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--swap);outline-offset:2px}
+button.primary{background:var(--bar);border-color:var(--bar);color:#fff;font-weight:700}
+button:disabled{opacity:.45;cursor:default}
+textarea{width:100%;box-sizing:border-box;min-height:340px;resize:vertical;font-family:var(--mono);font-size:14px;line-height:1.5;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);color:var(--ink);tab-size:4;white-space:pre;overflow:auto}
+.stage{height:260px;display:flex;align-items:flex-end;gap:6px;padding:8px 4px 0;border-bottom:2px solid var(--line)}
+.bar{flex:1;min-width:0;background:var(--bar);border-radius:4px 4px 0 0;position:relative;transition:height .18s ease,background-color .18s}
+.bar.cmp{background:var(--cmp)} .bar.swap{background:var(--swap)} .bar.set{background:var(--set)}
+.labels{display:flex;gap:6px;padding:0 4px}
+.labels div{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.labels.idx div{color:var(--muted);font-size:.75rem}
+.counters{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-variant-numeric:tabular-nums;display:flex;gap:6px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.status{min-height:1.5em;font-family:var(--mono);font-size:.9rem}
+.status.err{color:var(--set);font-weight:600;font-family:var(--ui);font-size:1rem}
+pre.out{margin:0;font-family:var(--mono);font-size:.85rem;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:3em;max-height:160px;overflow:auto;white-space:pre-wrap}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.85rem;color:var(--muted)}
+.legend span{display:flex;gap:6px;align-items:center}
+details{font-size:.9rem;color:var(--muted)} details code{font-family:var(--mono);color:var(--ink)}
+ .CodeMirror { font-family: monospace; height: 300px; color: black; direction: ltr; } .CodeMirror-lines { padding: 4px 0; } .CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like { padding: 0 4px; } .CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler { background-color: white; } .CodeMirror-gutters { border-right: 1px solid #ddd; background-color: #f7f7f7; white-space: nowrap; } .CodeMirror-linenumbers {} .CodeMirror-linenumber { padding: 0 3px 0 5px; min-width: 20px; text-align: right; color: #999; white-space: nowrap; } .CodeMirror-guttermarker { color: black; } .CodeMirror-guttermarker-subtle { color: #999; } .CodeMirror-cursor { border-left: 1px solid black; border-right: none; width: 0; } .CodeMirror div.CodeMirror-secondarycursor { border-left: 1px solid silver; } .cm-fat-cursor .CodeMirror-cursor { width: auto; border: 0 !important; background: #7e7; } .cm-fat-cursor div.CodeMirror-cursors { z-index: 1; } .cm-fat-cursor .CodeMirror-line::selection, .cm-fat-cursor .CodeMirror-line > span::selection, .cm-fat-cursor .CodeMirror-line > span > span::selection { background: transparent; } .cm-fat-cursor .CodeMirror-line::-moz-selection, .cm-fat-cursor .CodeMirror-line > span::-moz-selection, .cm-fat-cursor .CodeMirror-line > span > span::-moz-selection { background: transparent; } .cm-fat-cursor { caret-color: transparent; } @-moz-keyframes blink { 0% {} 50% { background-color: transparent; } 100% {} } @-webkit-keyframes blink { 0% {} 50% { background-color: transparent; } 100% {} } @keyframes blink { 0% {} 50% { background-color: transparent; } 100% {} } .CodeMirror-overwrite .CodeMirror-cursor {} .cm-tab { display: inline-block; text-decoration: inherit; } .CodeMirror-rulers { position: absolute; left: 0; right: 0; top: -50px; bottom: 0; overflow: hidden; } .CodeMirror-ruler { border-left: 1px solid #ccc; top: 0; bottom: 0; position: absolute; } .cm-s-default .cm-header {color: blue;} .cm-s-default .cm-quote {color: #090;} .cm-negative {color: #d44;} .cm-positive {color: #292;} .cm-header, .cm-strong {font-weight: bold;} .cm-em {font-style: italic;} .cm-link {text-decoration: underline;} .cm-strikethrough {text-decoration: line-through;} .cm-s-default .cm-keyword {color: #708;} .cm-s-default .cm-atom {color: #219;} .cm-s-default .cm-number {color: #164;} .cm-s-default .cm-def {color: #00f;} .cm-s-default .cm-variable, .cm-s-default .cm-punctuation, .cm-s-default .cm-property, .cm-s-default .cm-operator {} .cm-s-default .cm-variable-2 {color: #05a;} .cm-s-default .cm-variable-3, .cm-s-default .cm-type {color: #085;} .cm-s-default .cm-comment {color: #a50;} .cm-s-default .cm-string {color: #a11;} .cm-s-default .cm-string-2 {color: #f50;} .cm-s-default .cm-meta {color: #555;} .cm-s-default .cm-qualifier {color: #555;} .cm-s-default .cm-builtin {color: #30a;} .cm-s-default .cm-bracket {color: #997;} .cm-s-default .cm-tag {color: #170;} .cm-s-default .cm-attribute {color: #00c;} .cm-s-default .cm-hr {color: #999;} .cm-s-default .cm-link {color: #00c;} .cm-s-default .cm-error {color: #f00;} .cm-invalidchar {color: #f00;} .CodeMirror-composing { border-bottom: 2px solid; } div.CodeMirror span.CodeMirror-matchingbracket {color: #0b0;} div.CodeMirror span.CodeMirror-nonmatchingbracket {color: #a22;} .CodeMirror-matchingtag { background: rgba(255, 150, 0, .3); } .CodeMirror-activeline-background {background: #e8f2ff;} .CodeMirror { position: relative; overflow: hidden; background: white; } .CodeMirror-scroll { overflow: scroll !important; margin-bottom: -50px; margin-right: -50px; padding-bottom: 50px; height: 100%; outline: none; position: relative; z-index: 0; } .CodeMirror-sizer { position: relative; border-right: 50px solid transparent; } .CodeMirror-vscrollbar, .CodeMirror-hscrollbar, .CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler { position: absolute; z-index: 6; display: none; outline: none; } .CodeMirror-vscrollbar { right: 0; top: 0; overflow-x: hidden; overflow-y: scroll; } .CodeMirror-hscrollbar { bottom: 0; left: 0; overflow-y: hidden; overflow-x: scroll; } .CodeMirror-scrollbar-filler { right: 0; bottom: 0; } .CodeMirror-gutter-filler { left: 0; bottom: 0; } .CodeMirror-gutters { position: absolute; left: 0; top: 0; min-height: 100%; z-index: 3; } .CodeMirror-gutter { white-space: normal; height: 100%; display: inline-block; vertical-align: top; margin-bottom: -50px; } .CodeMirror-gutter-wrapper { position: absolute; z-index: 4; background: none !important; border: none !important; } .CodeMirror-gutter-background { position: absolute; top: 0; bottom: 0; z-index: 4; } .CodeMirror-gutter-elt { position: absolute; cursor: default; z-index: 4; } .CodeMirror-gutter-wrapper ::selection { background-color: transparent } .CodeMirror-gutter-wrapper ::-moz-selection { background-color: transparent } .CodeMirror-lines { cursor: text; min-height: 1px; } .CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like { -moz-border-radius: 0; -webkit-border-radius: 0; border-radius: 0; border-width: 0; background: transparent; font-family: inherit; font-size: inherit; margin: 0; white-space: pre; word-wrap: normal; line-height: inherit; color: inherit; z-index: 2; position: relative; overflow: visible; -webkit-tap-highlight-color: transparent; -webkit-font-variant-ligatures: contextual; font-variant-ligatures: contextual; } .CodeMirror-wrap pre.CodeMirror-line, .CodeMirror-wrap pre.CodeMirror-line-like { word-wrap: break-word; white-space: pre-wrap; word-break: normal; } .CodeMirror-linebackground { position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 0; } .CodeMirror-linewidget { position: relative; z-index: 2; padding: 0.1px; } .CodeMirror-widget {} .CodeMirror-rtl pre { direction: rtl; } .CodeMirror-code { outline: none; } .CodeMirror-scroll, .CodeMirror-sizer, .CodeMirror-gutter, .CodeMirror-gutters, .CodeMirror-linenumber { -moz-box-sizing: content-box; box-sizing: content-box; } .CodeMirror-measure { position: absolute; width: 100%; height: 0; overflow: hidden; visibility: hidden; } .CodeMirror-cursor { position: absolute; pointer-events: none; } .CodeMirror-measure pre { position: static; } div.CodeMirror-cursors { visibility: hidden; position: relative; z-index: 3; } div.CodeMirror-dragcursors { visibility: visible; } .CodeMirror-focused div.CodeMirror-cursors { visibility: visible; } .CodeMirror-selected { background: #d9d9d9; } .CodeMirror-focused .CodeMirror-selected { background: #d7d4f0; } .CodeMirror-crosshair { cursor: crosshair; } .CodeMirror-line::selection, .CodeMirror-line > span::selection, .CodeMirror-line > span > span::selection { background: #d7d4f0; } .CodeMirror-line::-moz-selection, .CodeMirror-line > span::-moz-selection, .CodeMirror-line > span > span::-moz-selection { background: #d7d4f0; } .cm-searching { background-color: #ffa; background-color: rgba(255, 255, 0, .4); } .cm-force-border { padding-right: .1px; } @media print { .CodeMirror div.CodeMirror-cursors { visibility: hidden; } } .cm-tab-wrap-hack:after { content: ''; } span.CodeMirror-selectedtext { background: none; } 
+.CodeMirror{height:360px;font-family:var(--mono);font-size:14px;line-height:1.5;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);color:var(--ink)}
+.CodeMirror-gutters{background:var(--code-bg);border-right:1px solid var(--line)}
+.CodeMirror-linenumber{color:var(--muted)}
+.CodeMirror-cursor{border-left:2px solid var(--ink)}
+.CodeMirror-selected,.CodeMirror-focused .CodeMirror-selected{background:var(--sel)}
+.CodeMirror-matchingbracket{color:var(--ink)!important;background:var(--sel);text-decoration:none}
+.cm-s-default .cm-keyword{color:var(--k-kw);font-weight:600}
+.cm-s-default .cm-builtin{color:var(--k-fn)}
+.cm-s-default .cm-number{color:var(--k-num)}
+.cm-s-default .cm-string{color:var(--k-str)}
+.cm-s-default .cm-comment{color:var(--muted);font-style:italic}
+.cm-s-default .cm-def{color:var(--k-fn);font-weight:600}
+.cm-s-default .cm-variable,.cm-s-default .cm-variable-2,.cm-s-default .cm-property{color:var(--ink)}
+.cm-s-default .cm-operator{color:var(--ink)}
+.zeile-aktiv{background:var(--hl)}
+.zeile-fehler{background:color-mix(in srgb,var(--set) 22%,transparent)}
+.nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.nav select{min-width:0;max-width:100%;font-weight:700}
+.fortschritt{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+button.weiter{margin-left:8px;background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700}
+.auftrag h2{font-size:1.15rem;margin:0}
+.auftrag p{margin:0;line-height:1.5}
+.auftrag code,.feedback code{font-family:var(--mono);font-size:.9em;background:var(--code-bg);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.auftrag{display:grid;gap:8px}
+#text{display:grid;gap:6px}
+.tipps{display:grid;gap:4px}
+.tipps details{font-size:.92rem}
+.tipps summary{cursor:pointer;color:var(--muted);font-weight:700}
+.tipps details p{margin:4px 0 0 18px}
+.feedback{border-radius:8px;padding:8px 10px;line-height:1.45}
+.feedback.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);border:1px solid var(--ok)}
+.feedback.nein{background:color-mix(in srgb,var(--set) 12%,transparent);border:1px solid var(--set)}
+button.ghost{border-color:transparent;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.bar{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Sortierlabor</h1>
+    <p>Code schreiben, ausführen und zusehen, wie sich die Balken bewegen.</p>
+  </header>
+  <nav class="nav" aria-label="Aufgaben">
+    <button id="zurueck" title="Vorherige Aufgabe">◀</button>
+    <select id="wahl" aria-label="Aufgabe wählen"></select>
+    <button id="weiter" title="Nächste Aufgabe">▶</button>
+    <span class="fortschritt" id="fortschritt"></span>
+  </nav>
+
+  <div class="grid">
+    <section class="panel" aria-label="Code">
+      <div class="auftrag">
+        <h2 id="titel"></h2>
+        <div id="text"></div>
+        <div class="tipps" id="tipps"></div>
+      </div>
+      <div class="row">
+        <button id="run" class="primary">▶ Ausführen</button>
+        <button id="pruefen">✓ Prüfen</button>
+        <span style="flex:1"></span>
+        <button id="reset" class="ghost" title="Startcode wiederherstellen">↺ Startcode</button>
+      </div>
+      <div class="feedback" id="feedback" role="status" hidden></div>
+      <textarea id="code" spellcheck="false" aria-label="Python-Code"></textarea>
+    </section>
+
+    <section class="panel" aria-label="Visualisierung">
+      <div class="stage" id="stage"></div>
+      <div class="labels" id="vals"></div>
+      <div class="labels idx" id="idx"></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--cmp)"></i>verglichen</span>
+        <span><i class="dot" style="background:var(--swap)"></i>getauscht</span>
+        <span><i class="dot" style="background:var(--set)"></i>überschrieben</span>
+      </div>
+      <div class="status" id="status" role="status">Bereit.</div>
+      <div class="row">
+        <button id="first" title="Zum Anfang">⏮</button>
+        <button id="prev" title="Schritt zurück">◀ Schritt</button>
+        <button id="play" title="Abspielen oder anhalten">⏸ Pause</button>
+        <button id="next" title="Schritt vor">Schritt ▶</button>
+        <button id="last" title="Zum Ende">⏭</button>
+        <label class="small" for="tempo" style="margin-left:8px">Tempo</label>
+        <input id="tempo" type="range" min="1" max="10" value="5">
+      </div>
+      <div class="counters" id="zaehler" hidden>
+        <span class="chip"><i class="dot" style="background:var(--cmp)"></i>Vergleiche <b id="nvgl">0</b></span>
+        <span class="chip"><i class="dot" style="background:var(--swap)"></i>Vertauschungen <b id="ntausch">0</b></span>
+        <span class="chip">Schritt <b id="nschritt">0 / 0</b></span>
+      </div>
+      <label class="small" for="out">Ausgabe</label>
+      <pre class="out" id="out"></pre>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script>
+const sortiert = a => a.every((x, k) => k === 0 || a[k - 1] <= x);
+const liste = a => '[' + a.join(', ') + ']';
+function einDurchgang(a){ a = a.slice(); for (let i = 0; i < a.length - 1; i++) if (a[i] > a[i + 1]) [a[i], a[i + 1]] = [a[i + 1], a[i]]; return a; }
+function vergleicheMitAbbruch(a){ a = a.slice(); let n = a.length, total = 0;
+  while (true){ let getauscht = false; for (let i = 0; i < n - 1; i++){ total++; if (a[i] > a[i + 1]){ [a[i], a[i + 1]] = [a[i + 1], a[i]]; getauscht = true; } } if (!getauscht) return total; } }
+function zufall(n){ const a = Array.from({length: n}, (_, k) => k + 1); for (let k = n - 1; k > 0; k--){ const m = Math.floor(Math.random() * (k + 1)); [a[k], a[m]] = [a[m], a[k]]; } return a; }
+const sortTests = () => [zufall(8), [8, 7, 6, 5, 4, 3, 2, 1], [1, 2, 3, 4, 5, 6], [3, 1, 3, 2, 1], zufall(10)];
+
+const THEMA_STANDARD = 'Bubble Sort';
+const AUFGABEN = [
+{ id: 'A1', titel: 'Zwei Elemente tauschen', tempo: 2,
+  text: '<p>In Python tauscht man zwei Elemente in einer Zeile:</p><p><code>liste[1], liste[2] = liste[2], liste[1]</code></p><p>Tauschen Sie die Elemente an Position 0 und 3.</p>',
+  tipps: [],
+  start: 'liste = Balken([4, 7, 1, 9, 3, 6])\n\n\nprint(liste)\n',
+  pruefe: r => liste(r.ende) === '[9, 7, 1, 4, 3, 6]' ? null : `Die Liste ist ${liste(r.ende)}, sie sollte [9, 7, 1, 4, 3, 6] sein.` },
+{ id: 'A2', titel: 'Kaputter Tausch', tempo: 2,
+  text: '<p>Dieser Code soll die Elemente an Position 1 und 2 tauschen. Führen Sie ihn aus. Was geht schief? Reparieren Sie ihn.</p>',
+  tipps: ['Achten Sie auf den roten Balken: Was passiert in der ersten Zeile mit der 7?'],
+  start: 'liste = Balken([4, 7, 1, 9, 3, 6])\n\nliste[1] = liste[2]\nliste[2] = liste[1]\n\nprint(liste)\n',
+  pruefe: r => liste(r.ende) === '[4, 1, 7, 9, 3, 6]' ? null : `Die Liste ist ${liste(r.ende)}, sie sollte [4, 1, 7, 9, 3, 6] sein.` },
+{ id: 'A3', titel: 'Nur tauschen, wenn nötig', tempo: 2,
+  text: '<p>Tauschen Sie die Elemente an Position 0 und 1 nur dann, wenn sie in der falschen Reihenfolge stehen, also die grössere Zahl links ist.</p><p>«Prüfen» testet Ihren Code auch mit anderen Listen.</p>',
+  tipps: ['Beginnen Sie mit <code>if liste[0] > liste[1]:</code>'],
+  start: 'liste = Balken([7, 2, 5, 1, 8, 3])\n\n\nprint(liste)\n',
+  tests: () => [[7, 2, 5, 1, 8, 3], [2, 7, 5, 1, 8, 3], [4, 4, 1, 2, 3, 5], [9, 1, 2, 3, 4, 5]],
+  pruefe: r => { const e = r.start.slice(); if (e[0] > e[1]) [e[0], e[1]] = [e[1], e[0]];
+    return liste(r.ende) === liste(e) ? null : `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}, richtig wäre ${liste(e)}.`; } },
+{ id: 'A4', titel: 'Ein Durchgang', tempo: 4,
+  text: '<p>Vergleichen Sie nacheinander alle Nachbarpaare: Position 0 und 1, dann 1 und 2, dann 2 und 3 und so weiter. Stehen zwei Nachbarn falsch, tauschen Sie sie.</p><p>Wo landet am Ende die grösste Zahl?</p>',
+  tipps: ['<code>for i in range(len(liste) - 1):</code> Die Nachbarn sind dann <code>liste[i]</code> und <code>liste[i + 1]</code>.', 'Warum <code>- 1</code>? Das letzte Element hat keinen rechten Nachbarn.'],
+  start: 'liste = Balken([5, 2, 8, 1, 9, 3])\n\n\nprint(liste)\n',
+  tests: () => [[5, 2, 8, 1, 9, 3], zufall(7), zufall(8), [6, 5, 4, 3, 2, 1]],
+  pruefe: r => { const e = einDurchgang(r.start);
+    return liste(r.ende) === liste(e) ? null : `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Nach einem Durchgang wäre es ${liste(e)}.`; } },
+{ id: 'A5', titel: 'Bubble Sort', tempo: 7,
+  text: '<p>Nach einem Durchgang ist die Liste noch nicht sortiert. Kopieren Sie Ihre Schleife aus A4 und wiederholen Sie den Durchgang so oft, bis die Liste sicher sortiert ist.</p><p>Wie viele Durchgänge braucht es höchstens?</p>',
+  tipps: ['Nach jedem Durchgang steht eine Zahl mehr ganz rechts am richtigen Platz.'],
+  start: 'liste = Balken([5, 2, 8, 1, 9, 3, 7, 4])\n\n# Kopieren Sie Ihre Schleife aus A4 hierher.\n\nprint(liste)\n',
+  tests: sortTests,
+  pruefe: r => sortiert(r.ende) ? null : `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Das ist noch nicht sortiert.` },
+{ id: 'A6', titel: 'Kürzere Durchgänge', challenge: true, tempo: 8, zaehler: true,
+  text: '<p>Nach dem ersten Durchgang steht die grösste Zahl ganz rechts. Der zweite Durchgang muss also nicht mehr bis ganz nach hinten.</p><p>Verkürzen Sie die Durchgänge so, dass Ihr Bubble Sort möglichst wenige Vergleiche braucht. Beobachten Sie den Zähler.</p>',
+  tipps: [],
+  start: 'liste = Balken([5, 2, 8, 1, 9, 3, 7, 4])\n\n# Kopieren Sie Ihren Bubble Sort aus A5 hierher.\n\nprint(liste)\n',
+  tests: sortTests,
+  pruefe: r => { const n = r.start.length, max = n * (n - 1) / 2;
+    if (!sortiert(r.ende)) return `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Das ist noch nicht sortiert.`;
+    return r.vgl <= max ? null : `Sortiert, aber mit ${r.vgl} Vergleichen. Bei ${n} Zahlen geht es mit ${max}.`; } },
+{ id: 'A7', titel: 'Früher fertig', challenge: true, tempo: 8, zaehler: true,
+  text: '<p>Ist die Liste schon vor dem letzten Durchgang sortiert, macht Ihr Bubble Sort trotzdem weiter. Bei einer bereits sortierten Liste ist das besonders ärgerlich.</p><p>Sorgen Sie dafür, dass er aufhört, sobald ein Durchgang nichts mehr tauscht.</p>',
+  tipps: [],
+  start: 'liste = Balken([1, 2, 3, 4, 6, 5, 7, 8])\n\n# Kopieren Sie Ihren Bubble Sort aus A5 oder A6 hierher.\n\nprint(liste)\n',
+  tests: () => [[1, 2, 3, 4, 6, 5, 7, 8], [1, 2, 3, 4, 5, 6, 7, 8], zufall(8), [2, 1, 3, 4, 5, 6]],
+  pruefe: r => { if (!sortiert(r.ende)) return `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Das ist noch nicht sortiert.`;
+    const max = vergleicheMitAbbruch(r.start);
+    return r.vgl <= max ? null : `Sortiert, aber mit ${liste(r.start)} braucht Ihr Code ${r.vgl} Vergleiche. Wer nach einem Durchgang ohne Tausch aufhört, braucht höchstens ${max}.`; } },
+{ id: 'Frei', thema: 'Frei', titel: 'Freies Labor', tempo: 5, frei: true,
+  text: '<p>Hier können Sie beliebig ausprobieren. <code>Balken(10)</code> mischt die Zahlen 1 bis 10 zufällig.</p>',
+  tipps: [], start: 'liste = Balken(10)\n\n\nprint(liste)\n' },
+];
+const $ = id => document.getElementById(id);
+const editor = CodeMirror.fromTextArea($('code'), {
+  mode: {name: 'python', version: 3, extra_keywords: ['repeat'], extra_builtins: ['Balken']},
+  lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false,
+  matchBrackets: true, autoCloseBrackets: true,
+  extraKeys: {
+    Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    ', 'end'),
+    'Shift-Tab': cm => cm.indentSelection('subtract'),
+    Backspace: cm => {
+      if (cm.somethingSelected()) return CodeMirror.Pass;
+      const c = cm.getCursor(), vor = cm.getLine(c.line).slice(0, c.ch);
+      if (c.ch > 0 && /^ +$/.test(vor)){ cm.replaceRange('', {line: c.line, ch: c.ch - (((c.ch - 1) % 4) + 1)}, c); return; }
+      return CodeMirror.Pass;
+    },
+    'Ctrl-Enter': () => ausfuehren(), 'Cmd-Enter': () => ausfuehren()
+  }
+});
+let aktuell = AUFGABEN[0];
+const speicher = {
+  lies(k){ try { return localStorage.getItem('sortierlabor-v5-' + k); } catch (e) { return null; } },
+  schreib(k, v){ try { localStorage.setItem('sortierlabor-v5-' + k, v); } catch (e) {} }
+};
+const gespeichert = {};
+function erledigt(){ try { return JSON.parse(speicher.lies('ok') || '[]'); } catch (e) { return []; } }
+function zeigeTabs(){
+  const ok = erledigt(), gruppen = [];
+  AUFGABEN.forEach(a => { const t = a.thema || THEMA_STANDARD; let g = gruppen.find(x => x.t === t); if (!g) gruppen.push(g = {t, l: []}); g.l.push(a); });
+  $('wahl').innerHTML = gruppen.map(g => `<optgroup label="${g.t}">` + g.l.map(a =>
+    `<option value="${a.id}"${a === aktuell ? ' selected' : ''}>${ok.includes(a.id) ? '✓ ' : ''}${a.challenge ? '🚀 ' : ''}${a.frei ? '' : a.id + ': '}${a.titel}</option>`).join('') + '</optgroup>').join('');
+  const k = AUFGABEN.indexOf(aktuell), aufg = AUFGABEN.filter(a => !a.frei);
+  $('zurueck').disabled = k <= 0; $('weiter').disabled = k >= AUFGABEN.length - 1;
+  $('fortschritt').textContent = `${aufg.filter(a => ok.includes(a.id)).length} von ${aufg.length} gelöst`;
+}
+$('wahl').onchange = e => waehle(e.target.value);
+$('zurueck').onclick = () => { const k = AUFGABEN.indexOf(aktuell); if (k > 0) waehle(AUFGABEN[k - 1].id); };
+$('weiter').onclick = () => { const k = AUFGABEN.indexOf(aktuell); if (k < AUFGABEN.length - 1) waehle(AUFGABEN[k + 1].id); };
+function zaehlerZeigen(){ $('zaehler').hidden = !(aktuell.zaehler || location.hash === '#zaehler'); }
+let bereit = false;
+function waehle(id){
+  if (bereit){ gespeichert[aktuell.id] = editor.getValue(); speicher.schreib('code-' + aktuell.id, editor.getValue()); }
+  aktuell = AUFGABEN.find(a => a.id === id) || AUFGABEN[0];
+  $('titel').textContent = (aktuell.challenge ? '🚀 Challenge ' : '') + (aktuell.frei ? '' : aktuell.id + ': ') + aktuell.titel;
+  $('text').innerHTML = aktuell.text;
+  $('tipps').innerHTML = aktuell.tipps.map((t, k) => `<details><summary>💡 Tipp${aktuell.tipps.length > 1 ? ' ' + (k + 1) : ''}</summary><p>${t}</p></details>`).join('');
+  $('pruefen').hidden = !!aktuell.frei;
+  $('feedback').hidden = true;
+  $('tempo').value = aktuell.tempo;
+  editor.setValue(gespeichert[aktuell.id] ?? speicher.lies('code-' + aktuell.id) ?? aktuell.start);
+  let z = 0; for (let k = 0; k < editor.lineCount(); k++){ if (/Balken\(/.test(editor.getLine(k))){ z = k + 1; break; } }
+  editor.setCursor(Math.min(z, editor.lineCount() - 1), 0);
+  zaehlerZeigen(); zeigeTabs(); ausfuehren();
+}
+window.addEventListener('hashchange', zaehlerZeigen);
+editor.on('change', () => { if (bereit) gespeichert[aktuell.id] = editor.getValue(); });
+$('reset').onclick = () => { editor.setValue(aktuell.start); $('feedback').hidden = true; };
+let markierteZeile = null;
+function markiereZeile(z, cls){
+  if (markierteZeile !== null){ editor.removeLineClass(markierteZeile.h, 'background', markierteZeile.c); markierteZeile = null; }
+  if (z && z >= 1 && z <= editor.lineCount()){ const h = editor.getLineHandle(z - 1); editor.addLineClass(h, 'background', cls); markierteZeile = {h, c: cls}; }
+}
+
+// Ereignisse aus Python
+let ev = [], pos = 0, timer = null, playing = false;
+window.evPop = () => ev.pop();
+function benutzerZeile(){
+  try { let fo = __BRYTHON__.frame_obj;
+    while (fo){ if (fo.frame.__file__ === '<string>') return fo.frame.$lineno; fo = fo.prev; }
+  } catch (e) {}
+  return 0;
+}
+window.aufzeichnen = (typ, werte, i, j, vgl, tausch) => {
+  const zeile = benutzerZeile();
+  ev.push({typ, werte: Array.from(werte), i, j, vgl, tausch, zeile});
+};
+
+function zeichne(){
+  const e = ev[pos];
+  const stage = $('stage'), vals = $('vals'), idx = $('idx');
+  if (!e){ stage.innerHTML = ''; vals.innerHTML = ''; idx.innerHTML = ''; return; }
+  const max = Math.max(1, ...e.werte);
+  if (stage.children.length !== e.werte.length){
+    stage.innerHTML = e.werte.map(() => '<div class="bar"></div>').join('');
+    vals.innerHTML = e.werte.map(() => '<div></div>').join('');
+    idx.innerHTML = e.werte.map((_, k) => `<div>${k}</div>`).join('');
+  }
+  const markiert = {};
+  if (e.typ === 'vergleich'){ markiert[e.i] = 'cmp'; if (e.j !== null && e.j !== undefined) markiert[e.j] = 'cmp'; }
+  if (e.typ === 'tausch'){ markiert[e.i] = 'swap'; markiert[e.j] = 'swap'; }
+  if (e.typ === 'setzen'){ markiert[e.i] = 'set'; }
+  e.werte.forEach((w, k) => {
+    const b = stage.children[k];
+    b.style.height = (Math.max(w, 0) / max * 100) + '%';
+    b.className = 'bar' + (markiert[k] ? ' ' + markiert[k] : '');
+    vals.children[k].textContent = w;
+  });
+  $('nvgl').textContent = e.vgl; $('ntausch').textContent = e.tausch;
+  $('nschritt').textContent = `${pos} / ${ev.length - 1}`;
+  const st = $('status'); st.classList.remove('err');
+  st.textContent = {
+    start: 'Start',
+    vergleich: e.j !== null && e.j !== undefined ? `Vergleich: Position ${Math.min(e.i, e.j)} und ${Math.max(e.i, e.j)}` : `Vergleich: Position ${e.i}`,
+    tausch: `Tausch: Position ${Math.min(e.i, e.j)} ↔ ${Math.max(e.i, e.j)}`,
+    setzen: `Position ${e.i} überschrieben mit ${e.werte[e.i]}`
+  }[e.typ] || '';
+  markiereZeile(e.zeile, 'zeile-aktiv');
+  if (pos === ev.length - 1 && fehlerText){ st.textContent = fehlerText; st.classList.add('err'); if (fehlerZeile) markiereZeile(fehlerZeile, 'zeile-fehler'); }
+}
+function verzoegerung(){ return 1100 / Math.pow(1.6, +$('tempo').value - 1); }
+function tick(){
+  if (pos < ev.length - 1){ pos++; zeichne(); timer = setTimeout(tick, verzoegerung()); }
+  else stopp();
+}
+function start(){ if (pos >= ev.length - 1) pos = 0; playing = true; $('play').textContent = '⏸ Pause'; zeichne(); clearTimeout(timer); timer = setTimeout(tick, verzoegerung()); }
+function stopp(){ playing = false; $('play').textContent = '▶ Abspielen'; clearTimeout(timer); }
+$('play').onclick = () => playing ? stopp() : start();
+$('next').onclick = () => { stopp(); if (pos < ev.length - 1){ pos++; zeichne(); } };
+$('prev').onclick = () => { stopp(); if (pos > 0){ pos--; zeichne(); } };
+$('first').onclick = () => { stopp(); pos = 0; zeichne(); };
+$('last').onclick = () => { stopp(); pos = Math.max(0, ev.length - 1); zeichne(); };
+
+let fehlerText = '', fehlerZeile = 0;
+const UEBERSETZUNG = [
+  [/^SyntaxError: expected ':'/, () => 'Am Ende der Zeile fehlt ein Doppelpunkt «:».'],
+  [/^IndentationError: expected an indented block after '(\w+)'/, m => `Nach «${m[1]}» muss die nächste Zeile eingerückt sein.`],
+  [/^IndentationError: expected an indented block/, () => 'Hier muss die nächste Zeile eingerückt sein.'],
+  [/^IndentationError: unexpected indent/, () => 'Diese Zeile ist zu weit eingerückt.'],
+  [/^IndentationError: unindent does not match/, () => 'Die Einrückung passt nicht zu den Zeilen darüber.'],
+  [/^IndentationError/, () => 'Die Einrückung stimmt nicht.'],
+  [/^SyntaxError: '(.)' was never closed/, m => `Die Klammer «${m[1]}» wird nie geschlossen. Oder fehlt ein Anführungszeichen?`],
+  [/^SyntaxError: unterminated string/, () => 'Ein Text in Anführungszeichen wird nicht geschlossen.'],
+  [/^SyntaxError: unmatched '(.)'/, m => `Die Klammer «${m[1]}» wurde nie geöffnet.`],
+  [/^SyntaxError: invalid syntax. Maybe you meant '==' or ':=' instead of '='/, () => 'Für einen Vergleich braucht es «==», nicht «=».'],
+  [/^SyntaxError: cannot assign to/, () => 'Links vom «=» muss ein Name oder ein Listenelement stehen.'],
+  [/^SyntaxError/, () => 'Die Schreibweise stimmt hier nicht. Prüfen Sie Klammern, Doppelpunkte und Anführungszeichen.'],
+  [/^NameError: name '(\w+)' is not defined/, m => `«${m[1]}» ist nicht definiert. Tippfehler oder noch keinen Wert zugewiesen?`],
+  [/^IndexError: (.*)/, m => m[1]],
+  [/^TypeError: Der Index (.*)/, m => 'Der Index ' + m[1] + '. Tipp: // statt / verwenden.'],
+  [/^TypeError: unsupported operand type\(s\) for (.+?): '(\w+)' and '(\w+)'/, m => `«${m[1]}» geht nicht mit ${typ(m[2])} und ${typ(m[3])}.`],
+  [/^TypeError: '(\w+)' object is not callable/, m => `${typ(m[1])} kann man nicht wie eine Funktion mit () aufrufen.`],
+  [/^TypeError: '(\w+)' object is not subscriptable/, m => `Bei ${typ(m[1])} kann man nicht mit [ ] auf Elemente zugreifen.`],
+  [/^TypeError: (\w+)\(\) missing (\d+) required positional argument/, m => `Beim Aufruf von ${m[1]}() fehlen ${m[2]} Argument(e).`],
+  [/^TypeError: (\w+)\(\) takes (\d+) positional arguments? but (\d+)/, m => `${m[1]}() erwartet ${m[2]} Argument(e), bekommen hat sie ${m[3]}.`],
+  [/^ZeroDivisionError/, () => 'Division durch 0.'],
+  [/^UnboundLocalError: .*'(\w+)'/, m => `«${m[1]}» wird benutzt, bevor es einen Wert hat.`],
+];
+function typ(t){ return {Zahl: 'einer Zahl', int: 'einer Zahl', float: 'einer Kommazahl', str: 'einem Text', list: 'einer Liste', Balken: 'Balken', NoneType: 'None'}[t] || t; }
+function uebersetze(f){
+  for (const [re, fn] of UEBERSETZUNG){ const m = f.match(re); if (m) return fn(m); }
+  return f;
+}
+function lauf(vorgabe){
+  stopp(); ev = []; pos = 0; fehlerText = ''; fehlerZeile = 0; markiereZeile(0); $('out').textContent = '';
+  const src = editor.getValue().replace(/^(\s*)repeat\s+(.+?)\s*:/gm, '$1for _ in range($2):').replace(/^(\s*)repeat\s*:/gm, '$1while True:');
+  window.pyAusfuehren(src, vorgabe || []);
+  const res = {ausgabe: window.pyAusgabe || '', fehler: window.pyFehler || ''};
+  fehlerZeile = window.pyFehlerZeile || 0;
+  while (fehlerZeile > 1 && (fehlerZeile > editor.lineCount() || !editor.getLine(fehlerZeile - 1).trim())) fehlerZeile--;
+  $('out').textContent = res.ausgabe;
+  if (res.fehler){
+    const abbruch = !/^\w+Error: /.test(res.fehler);
+    fehlerText = (fehlerZeile ? `❌ Zeile ${fehlerZeile}: ` : '❌ ') + (abbruch ? res.fehler : uebersetze(res.fehler));
+    if (!abbruch) $('out').textContent += (res.ausgabe && !res.ausgabe.endsWith('\n') ? '\n' : '') + res.fehler + (fehlerZeile ? ` (Zeile ${fehlerZeile})` : '');
+  }
+  const letzt = ev[ev.length - 1];
+  return {fehler: fehlerText, start: ev.length ? ev[0].werte : null, ende: letzt ? letzt.werte : null, vgl: letzt ? letzt.vgl : 0, tausch: letzt ? letzt.tausch : 0};
+}
+function zeigeLauf(){
+  if (fehlerZeile) editor.scrollIntoView({line: fehlerZeile - 1, ch: 0}, 60);
+  if (!ev.length){
+    $('status').textContent = fehlerText || 'Keine Balken erstellt. Beginnen Sie mit liste = Balken([...]).';
+    $('status').classList.toggle('err', !!fehlerText); zeichne(); if (fehlerZeile) markiereZeile(fehlerZeile, 'zeile-fehler'); return;
+  }
+  start();
+}
+function ausfuehren(){
+  if (!window.pyAusfuehren){ $('status').textContent = 'Python lädt noch …'; return; }
+  $('feedback').hidden = true;
+  lauf(null); zeigeLauf();
+}
+function rueckmeldung(ok, html){ const f = $('feedback'); f.hidden = false; f.className = 'feedback ' + (ok ? 'ok' : 'nein'); f.innerHTML = html; }
+function pruefen(){
+  if (!window.pyAusfuehren || aktuell.frei) return;
+  const tests = aktuell.tests ? aktuell.tests() : [null];
+  let erster = null;
+  for (const t of tests){
+    const r = lauf(t);
+    if (r.fehler){ zeigeLauf(); rueckmeldung(false, 'Ihr Code hat noch einen Fehler. Er ist in der Visualisierung beschrieben.'); return; }
+    if (!r.ende){ zeigeLauf(); rueckmeldung(false, 'Es wurden keine Balken erstellt. Die erste Zeile muss <code>liste = Balken([...])</code> bleiben.'); return; }
+    const m = aktuell.pruefe(r);
+    if (m){ zeigeLauf(); rueckmeldung(false, '❌ ' + m + (tests.length > 1 ? ' Die Balken zeigen diesen Test.' : '')); return; }
+    if (!erster) erster = t;
+  }
+  const ok = erledigt(); if (!ok.includes(aktuell.id)){ ok.push(aktuell.id); speicher.schreib('ok', JSON.stringify(ok)); }
+  zeigeTabs();
+  lauf(tests.length > 1 ? erster : null); zeigeLauf();
+  const naechste = AUFGABEN[AUFGABEN.indexOf(aktuell) + 1];
+  rueckmeldung(true, '✅ Richtig!' + (tests.length > 1 ? ` Alle ${tests.length} Tests bestanden.` : '') +
+    (naechste && !naechste.frei ? ` <button class="weiter" id="weiterOk">Weiter zu ${naechste.challenge ? '🚀 ' : ''}${naechste.id} ▶</button>` : (naechste ? ' Sie haben alle Aufgaben gelöst.' : '')));
+  const w = document.getElementById('weiterOk'); if (w) w.onclick = () => waehle(naechste.id);
+}
+$('pruefen').onclick = pruefen;
+$('run').onclick = ausfuehren;
+</script>
+
+<script type="text/python">
+from browser import window
+
+GRENZE = 5000
+
+class Abbruch(Exception):
+    pass
+
+class Zahl(int):
+    def __new__(cls, wert, idx, quelle):
+        o = int.__new__(cls, wert)
+        o.idx = idx
+        o.quelle = quelle
+        return o
+    def _vgl(self, other, ergebnis):
+        j = other.idx if isinstance(other, Zahl) and other.quelle is self.quelle else None
+        self.quelle._vergleich(self.idx, j)
+        return ergebnis
+    def __lt__(self, o): return self._vgl(o, int(self) < int(o))
+    def __le__(self, o): return self._vgl(o, int(self) <= int(o))
+    def __gt__(self, o): return self._vgl(o, int(self) > int(o))
+    def __ge__(self, o): return self._vgl(o, int(self) >= int(o))
+    def __eq__(self, o):
+        try:
+            return self._vgl(o, int(self) == int(o))
+        except (TypeError, ValueError):
+            return False
+    def __ne__(self, o): return not self.__eq__(o)
+    def __hash__(self): return int.__hash__(int(self))
+
+class Balken:
+    def __init__(self, werte):
+        if VORGABE[0] is not None:
+            werte = VORGABE[0]
+            VORGABE[0] = None
+        if isinstance(werte, int):
+            n = werte
+            werte = list(range(1, n + 1))
+            for k in range(n - 1, 0, -1):
+                m = int(window.Math.random() * (k + 1))
+                werte[k], werte[m] = werte[m], werte[k]
+        self._w = [int(x) for x in werte]
+        self._vgl = 0
+        self._tausch = 0
+        self._letztes = None
+        self._n = 0
+        self._melde('start', None, None)
+
+    def _melde(self, typ, i, j):
+        self._n += 1
+        if self._n > GRENZE:
+            raise Abbruch("Mehr als 5000 Schritte. Haben Sie eine Endlosschleife?")
+        window.aufzeichnen(typ, list(self._w), i, j, self._vgl, self._tausch)
+
+    def _vergleich(self, i, j):
+        self._vgl += 1
+        self._letztes = None
+        self._melde('vergleich', i, j)
+
+    def _index(self, i):
+        if not isinstance(i, int):
+            raise TypeError("Der Index muss eine ganze Zahl sein, nicht " + type(i).__name__)
+        n = len(self._w)
+        if i < -n or i >= n:
+            raise IndexError("Index " + str(int(i)) + " gibt es nicht. Die Liste hat " + str(n) + " Elemente (Index 0 bis " + str(n - 1) + ").")
+        return int(i) % n
+
+    def __len__(self):
+        return len(self._w)
+
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            return self._w[i]
+        k = self._index(i)
+        return Zahl(self._w[k], k, self)
+
+    def __setitem__(self, i, wert):
+        k = self._index(i)
+        wert = int(wert)
+        alt = self._w[k]
+        self._w[k] = wert
+        l = self._letztes
+        if l is not None and l[0] != k and l[1] == alt and l[2] == wert:
+            # zweite Hälfte von a[i], a[j] = a[j], a[i]: als ein Tausch zählen
+            self._tausch += 1
+            window.evPop()
+            self._n -= 1
+            self._letztes = None
+            self._melde('tausch', l[0], k)
+        else:
+            self._letztes = (k, wert, alt)
+            self._melde('setzen', k, None)
+
+    def __iter__(self):
+        for k in range(len(self._w)):
+            yield Zahl(self._w[k], k, self)
+
+    def __repr__(self):
+        return str(self._w)
+
+def benutzerzeile_aus(e):
+    z = 0
+    tb = e.__traceback__
+    while tb is not None:
+        if tb.tb_frame.f_code.co_filename == "<string>":
+            z = tb.tb_lineno
+        tb = tb.tb_next
+    return z
+
+class Ausgabe:
+    def __init__(self):
+        self.text = ""
+    def write(self, s):
+        self.text += str(s)
+    def flush(self):
+        pass
+
+VORGABE = [None]
+
+def py_ausfuehren(src, vorgabe=None):
+    w = [int(x) for x in vorgabe]
+    VORGABE[0] = w if len(w) > 0 else None
+    aus = Ausgabe()
+    def drucke(*args, sep=" ", end="\n"):
+        aus.write(sep.join(str(a) for a in args) + end)
+    fehler = ""
+    zeile_f = 0
+    try:
+        exec(src, {"Balken": Balken, "print": drucke, "__name__": "__main__"})
+    except Abbruch as e:
+        fehler = str(e)
+        zeile_f = benutzerzeile_aus(e)
+    except Exception as e:
+        zeile = ""
+        tb = e.__traceback__
+        while tb is not None:
+            if tb.tb_frame.f_code.co_filename == "<string>":
+                zeile = tb.tb_lineno
+            tb = tb.tb_next
+        if isinstance(e, SyntaxError) and getattr(e, "lineno", None):
+            zeile = e.lineno
+        zeile_f = zeile or 0
+        meldung = e.msg if isinstance(e, SyntaxError) and getattr(e, "msg", None) else str(e)
+        fehler = type(e).__name__ + ": " + meldung
+    window.pyAusgabe = aus.text
+    window.pyFehler = fehler
+    window.pyFehlerZeile = zeile_f
+
+window.pyAusfuehren = py_ausfuehren
+window.ladeFertig()
+</script>
+<script>
+window.ladeFertig = () => { waehle(AUFGABEN[0].id); bereit = true; };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/brython@3.14.3/brython.min.js"></script>
+<script>brython({debug: 1});</script>
+
+</body>
+</html>
