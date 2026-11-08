@@ -75,7 +75,9 @@ details{font-size:.9rem;color:var(--muted)} details code{font-family:var(--mono)
 .zeile-aktiv{background:var(--hl)}
 .zeile-fehler{background:color-mix(in srgb,var(--set) 22%,transparent)}
 .nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.nav select{min-width:0;max-width:100%;font-weight:700}
+.auswahl{position:relative;display:inline-flex;min-width:0;max-width:100%}
+.auswahl select{appearance:none;-webkit-appearance:none;min-width:0;max-width:100%;font-weight:700;padding:7px 36px 7px 12px;border-radius:6px;cursor:pointer}
+.auswahl::after{content:'';position:absolute;right:14px;top:50%;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .fortschritt{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
 button.weiter{margin-left:8px;background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700}
 .auftrag h2{font-size:1.15rem;margin:0}
@@ -101,7 +103,7 @@ button.ghost{border-color:transparent;color:var(--muted)}
   </header>
   <nav class="nav" aria-label="Aufgaben">
     <button id="zurueck" title="Vorherige Aufgabe">◀</button>
-    <select id="wahl" aria-label="Aufgabe wählen"></select>
+    <span class="auswahl"><select id="wahl" aria-label="Aufgabe wählen"></select></span>
     <button id="weiter" title="Nächste Aufgabe">▶</button>
     <span class="fortschritt" id="fortschritt"></span>
   </nav>
@@ -169,10 +171,10 @@ const sortTests = () => [zufall(8), [8, 7, 6, 5, 4, 3, 2, 1], [1, 2, 3, 4, 5, 6]
 const THEMA_STANDARD = 'Bubble Sort';
 const AUFGABEN = [
 { id: 'A1', titel: 'Zwei Elemente tauschen', tempo: 2,
-  text: '<p>In Python tauscht man zwei Elemente in einer Zeile:</p><p><code>liste[1], liste[2] = liste[2], liste[1]</code></p><p>Tauschen Sie die Elemente an Position 0 und 3.</p>',
+  text: '<p>Klicken Sie auf «Ausführen». Die Zeile im Code tauscht die Elemente an Position 1 und 2.</p><p>Ergänzen Sie eine Zeile, die zusätzlich die Elemente an Position 0 und 3 tauscht.</p>',
   tipps: [],
-  start: 'liste = Balken([4, 7, 1, 9, 3, 6])\n\n\nprint(liste)\n',
-  pruefe: r => liste(r.ende) === '[9, 7, 1, 4, 3, 6]' ? null : `Die Liste ist ${liste(r.ende)}, sie sollte [9, 7, 1, 4, 3, 6] sein.` },
+  start: 'liste = Balken([4, 7, 1, 9, 3, 6])\n\nliste[1], liste[2] = liste[2], liste[1]\n\n\nprint(liste)\n',
+  pruefe: r => liste(r.ende) === '[9, 1, 7, 4, 3, 6]' ? null : `Die Liste ist ${liste(r.ende)}, sie sollte [9, 1, 7, 4, 3, 6] sein.` },
 { id: 'A2', titel: 'Kaputter Tausch', tempo: 2,
   text: '<p>Dieser Code soll die Elemente an Position 1 und 2 tauschen. Führen Sie ihn aus. Was geht schief? Reparieren Sie ihn.</p>',
   tipps: ['Achten Sie auf den roten Balken: Was passiert in der ersten Zeile mit der 7?'],
@@ -237,8 +239,8 @@ const editor = CodeMirror.fromTextArea($('code'), {
 });
 let aktuell = AUFGABEN[0];
 const speicher = {
-  lies(k){ try { return localStorage.getItem('sortierlabor-v5-' + k); } catch (e) { return null; } },
-  schreib(k, v){ try { localStorage.setItem('sortierlabor-v5-' + k, v); } catch (e) {} }
+  lies(k){ try { return localStorage.getItem('sortierlabor-v6-' + k); } catch (e) { return null; } },
+  schreib(k, v){ try { localStorage.setItem('sortierlabor-v6-' + k, v); } catch (e) {} }
 };
 const gespeichert = {};
 function erledigt(){ try { return JSON.parse(speicher.lies('ok') || '[]'); } catch (e) { return []; } }
@@ -268,11 +270,11 @@ function waehle(id){
   editor.setValue(gespeichert[aktuell.id] ?? speicher.lies('code-' + aktuell.id) ?? aktuell.start);
   let z = 0; for (let k = 0; k < editor.lineCount(); k++){ if (/Balken\(/.test(editor.getLine(k))){ z = k + 1; break; } }
   editor.setCursor(Math.min(z, editor.lineCount() - 1), 0);
-  zaehlerZeigen(); zeigeTabs(); ausfuehren();
+  zaehlerZeigen(); zeigeTabs(); vorschau();
 }
 window.addEventListener('hashchange', zaehlerZeigen);
 editor.on('change', () => { if (bereit) gespeichert[aktuell.id] = editor.getValue(); });
-$('reset').onclick = () => { editor.setValue(aktuell.start); $('feedback').hidden = true; };
+$('reset').onclick = () => { editor.setValue(aktuell.start); $('feedback').hidden = true; vorschau(); };
 let markierteZeile = null;
 function markiereZeile(z, cls){
   if (markierteZeile !== null){ editor.removeLineClass(markierteZeile.h, 'background', markierteZeile.c); markierteZeile = null; }
@@ -391,6 +393,15 @@ function zeigeLauf(){
     $('status').classList.toggle('err', !!fehlerText); zeichne(); if (fehlerZeile) markiereZeile(fehlerZeile, 'zeile-fehler'); return;
   }
   start();
+}
+function vorschau(){
+  stopp(); fehlerText = ''; fehlerZeile = 0; markiereZeile(0); $('out').textContent = '';
+  const m = editor.getValue().match(/Balken\(\s*\[([\d,\s]+)\]\s*\)/);
+  ev = m ? [{typ: 'start', werte: m[1].split(',').map(x => parseInt(x)).filter(x => !isNaN(x)), vgl: 0, tausch: 0, zeile: 0}] : [];
+  pos = 0; zeichne();
+  $('status').classList.remove('err');
+  $('status').textContent = 'Klicken Sie auf «Ausführen».';
+  $('nschritt').textContent = '0 / 0';
 }
 function ausfuehren(){
   if (!window.pyAusfuehren){ $('status').textContent = 'Python lädt noch …'; return; }
