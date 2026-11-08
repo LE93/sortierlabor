@@ -31,7 +31,7 @@ h1{font-size:1.5rem;margin:0;text-wrap:balance}
 header p{margin:0;color:var(--muted)}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
 @media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0;align-content:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0;align-content:start;grid-template-columns:minmax(0,1fr)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 label.small{font-size:.85rem;color:var(--muted);letter-spacing:.02em}
 select,button,input[type=range]{font-family:var(--ui);font-size:.95rem}
@@ -46,7 +46,7 @@ textarea{width:100%;box-sizing:border-box;min-height:340px;resize:vertical;font-
 .bar{flex:1;min-width:0;background:var(--bar);border-radius:4px 4px 0 0;position:relative;transition:height .18s ease,background-color .18s}
 .bar.cmp{background:var(--cmp)} .bar.swap{background:var(--swap)} .bar.set{background:var(--set)}
 .labels{display:flex;gap:6px;padding:0 4px}
-.labels div{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.labels div{flex:1;min-width:0;overflow:hidden;text-align:center;font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
 .labels.idx div{color:var(--muted);font-size:.75rem}
 .counters{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-variant-numeric:tabular-nums;display:flex;gap:6px;align-items:center}
@@ -305,6 +305,9 @@ function zeichne(){
     vals.innerHTML = e.werte.map(() => '<div></div>').join('');
     idx.innerHTML = e.werte.map((_, k) => `<div>${k}</div>`).join('');
   }
+  const n = e.werte.length, luecke = n > 40 ? '1px' : n > 20 ? '3px' : '6px';
+  stage.style.gap = vals.style.gap = idx.style.gap = luecke;
+  vals.hidden = n > 24; idx.hidden = n > 24;
   const markiert = {};
   if (e.typ === 'vergleich'){ markiert[e.i] = 'cmp'; if (e.j !== null && e.j !== undefined) markiert[e.j] = 'cmp'; }
   if (e.typ === 'tausch'){ markiert[e.i] = 'swap'; markiert[e.j] = 'swap'; }
