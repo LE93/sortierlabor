@@ -42,7 +42,7 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 button.primary{background:var(--bar);border-color:var(--bar);color:#fff;font-weight:700}
 button:disabled{opacity:.45;cursor:default}
 textarea{width:100%;box-sizing:border-box;min-height:340px;resize:vertical;font-family:var(--mono);font-size:14px;line-height:1.5;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);color:var(--ink);tab-size:4;white-space:pre;overflow:auto}
-.stage{height:260px;display:flex;align-items:flex-end;gap:6px;padding:8px 4px 0;border-bottom:2px solid var(--line)}
+.stage{height:260px;display:flex;align-items:flex-end;gap:6px;padding:8px 4px 0;border-bottom:2px solid var(--line);position:relative}
 .bar{flex:1;min-width:0;background:var(--bar);border-radius:4px 4px 0 0;position:relative;transition:height .18s ease,background-color .18s}
 .bar.cmp{background:var(--cmp)} .bar.swap{background:var(--swap)} .bar.set{background:var(--set)}
 .labels{display:flex;gap:6px;padding:0 4px}
@@ -91,7 +91,8 @@ button.weiter{margin-left:8px;background:var(--ok);border-color:var(--ok);color:
 .tipps details p{margin:4px 0 0 18px}
 .feedback{border-radius:8px;padding:8px 10px;line-height:1.45}
 .feedback.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);border:1px solid var(--ok)}
-.feedback.nein{background:color-mix(in srgb,var(--set) 12%,transparent);border:1px solid var(--set)}
+.feedback.hinweis{background:color-mix(in srgb,var(--cmp) 12%,transparent);border:1px solid color-mix(in srgb,var(--cmp) 60%,transparent)}
+button.fallknopf{margin-left:6px;padding:4px 10px;font-size:.9rem}
 button.ghost{border-color:transparent;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.bar{transition:none}}
 </style>
@@ -117,7 +118,6 @@ button.ghost{border-color:transparent;color:var(--muted)}
       </div>
       <div class="row">
         <button id="run" class="primary">▶ Ausführen</button>
-        <button id="pruefen">✓ Prüfen</button>
         <span style="flex:1"></span>
         <button id="reset" class="ghost" title="Startcode wiederherstellen">↺ Startcode</button>
       </div>
@@ -181,7 +181,7 @@ const AUFGABEN = [
   start: 'liste = Balken([4, 7, 1, 9, 3, 6])\n\nliste[1] = liste[2]\nliste[2] = liste[1]\n\nprint(liste)\n',
   pruefe: r => liste(r.ende) === '[4, 1, 7, 9, 3, 6]' ? null : `Die Liste ist ${liste(r.ende)}, sie sollte [4, 1, 7, 9, 3, 6] sein.` },
 { id: 'A3', titel: 'Nur tauschen, wenn nötig', tempo: 2,
-  text: '<p>Tauschen Sie die Elemente an Position 0 und 1 nur dann, wenn sie in der falschen Reihenfolge stehen, also die grössere Zahl links ist.</p><p>«Prüfen» testet Ihren Code auch mit anderen Listen.</p>',
+  text: '<p>Tauschen Sie die Elemente an Position 0 und 1 nur dann, wenn sie in der falschen Reihenfolge stehen, also die grössere Zahl links ist.</p><p>Beim Ausführen wird Ihr Code auch mit anderen Listen getestet.</p>',
   tipps: ['Beginnen Sie mit <code>if liste[0] > liste[1]:</code>'],
   start: 'liste = Balken([7, 2, 5, 1, 8, 3])\n\n\nprint(liste)\n',
   tests: () => [[7, 2, 5, 1, 8, 3], [2, 7, 5, 1, 8, 3], [4, 4, 1, 2, 3, 5], [9, 1, 2, 3, 4, 5]],
@@ -264,7 +264,6 @@ function waehle(id){
   $('titel').textContent = (aktuell.challenge ? '🚀 Challenge ' : '') + (aktuell.frei ? '' : aktuell.id + ': ') + aktuell.titel;
   $('text').innerHTML = aktuell.text;
   $('tipps').innerHTML = aktuell.tipps.map((t, k) => `<details><summary>💡 Tipp${aktuell.tipps.length > 1 ? ' ' + (k + 1) : ''}</summary><p>${t}</p></details>`).join('');
-  $('pruefen').hidden = !!aktuell.frei;
   $('feedback').hidden = true;
   $('tempo').value = aktuell.tempo;
   editor.setValue(gespeichert[aktuell.id] ?? speicher.lies('code-' + aktuell.id) ?? aktuell.start);
@@ -282,7 +281,8 @@ function markiereZeile(z, cls){
 }
 
 // Ereignisse aus Python
-let ev = [], pos = 0, timer = null, playing = false;
+let ev = [], pos = 0, timer = null, playing = false, letzterPos = -1;
+const reduziert = matchMedia('(prefers-reduced-motion: reduce)');
 window.evPop = () => ev.pop();
 function benutzerZeile(){
   try { let fo = __BRYTHON__.frame_obj;
@@ -312,12 +312,30 @@ function zeichne(){
   if (e.typ === 'vergleich'){ markiert[e.i] = 'cmp'; if (e.j !== null && e.j !== undefined) markiert[e.j] = 'cmp'; }
   if (e.typ === 'tausch'){ markiert[e.i] = 'swap'; markiert[e.j] = 'swap'; }
   if (e.typ === 'setzen'){ markiert[e.i] = 'set'; }
+  const vorher = ev[pos - 1], vorwaerts = pos === letzterPos + 1 && vorher;
+  const dauer = Math.min(verzoegerung() * 0.85, 700);
+  const animieren = vorwaerts && n <= 40 && dauer >= 150 && !reduziert.matches;
+  const posX = k => stage.children[k].offsetLeft + stage.children[k].offsetWidth / 2;
+  const hoeheProzent = w => Math.max(w, 0) / max * 100;
   e.werte.forEach((w, k) => {
     const b = stage.children[k];
-    b.style.height = (Math.max(w, 0) / max * 100) + '%';
+    b.style.height = hoeheProzent(w) + '%';
     b.className = 'bar' + (markiert[k] ? ' ' + markiert[k] : '');
     vals.children[k].textContent = w;
   });
+  // Tausch: Balken wandern im Bogen aneinander vorbei
+  if (animieren && e.typ === 'tausch'){
+    const dx = posX(e.j) - posX(e.i), hub = Math.min(40, stage.clientHeight * 0.15);
+    [[e.i, dx, -hub], [e.j, -dx, 0]].forEach(([k, von, bogen]) => {
+      const b = stage.children[k];
+      b.style.position = 'relative'; b.style.zIndex = bogen ? 2 : 1; setTimeout(() => { b.style.zIndex = ''; }, dauer);
+      b.style.transition = 'none'; b.offsetHeight; b.style.transition = '';
+      const kf = [{transform: `translate(${von}px, 0)`}, {transform: `translate(${von / 2}px, ${bogen}px)`}, {transform: 'translate(0, 0)'}];
+      b.animate(kf, {duration: dauer, easing: 'ease-in-out'});
+      if (!vals.hidden) vals.children[k].animate([{transform: `translateX(${von}px)`}, {transform: 'translateX(0)'}], {duration: dauer, easing: 'ease-in-out'});
+    });
+  }
+  letzterPos = pos;
   $('nvgl').textContent = e.vgl; $('ntausch').textContent = e.tausch;
   $('nschritt').textContent = `${pos} / ${ev.length - 1}`;
   const st = $('status'); st.classList.remove('err');
@@ -406,33 +424,38 @@ function vorschau(){
   $('status').textContent = 'Klicken Sie auf «Ausführen».';
   $('nschritt').textContent = '0 / 0';
 }
+function rueckmeldung(art, html){ const f = $('feedback'); f.hidden = false; f.className = 'feedback ' + art; f.innerHTML = html; }
 function ausfuehren(){
   if (!window.pyAusfuehren){ $('status').textContent = 'Python lädt noch …'; return; }
   $('feedback').hidden = true;
-  lauf(null); zeigeLauf();
-}
-function rueckmeldung(ok, html){ const f = $('feedback'); f.hidden = false; f.className = 'feedback ' + (ok ? 'ok' : 'nein'); f.innerHTML = html; }
-function pruefen(){
-  if (!window.pyAusfuehren || aktuell.frei) return;
-  const tests = aktuell.tests ? aktuell.tests() : [null];
-  let erster = null;
-  for (const t of tests){
-    const r = lauf(t);
-    if (r.fehler){ zeigeLauf(); rueckmeldung(false, 'Ihr Code hat noch einen Fehler. Er ist in der Visualisierung beschrieben.'); return; }
-    if (!r.ende){ zeigeLauf(); rueckmeldung(false, 'Es wurden keine Balken erstellt. Die erste Zeile muss <code>liste = Balken([...])</code> bleiben.'); return; }
-    const m = aktuell.pruefe(r);
-    if (m){ zeigeLauf(); rueckmeldung(false, '❌ ' + m + (tests.length > 1 ? ' Die Balken zeigen diesen Test.' : '')); return; }
-    if (!erster) erster = t;
+  const eigen = lauf(null);
+  if (aktuell.frei || eigen.fehler){ zeigeLauf(); return; }
+  if (!eigen.ende){ zeigeLauf(); rueckmeldung('hinweis', 'Es wurden keine Balken erstellt. Die erste Zeile muss <code>liste = Balken([...])</code> bleiben.'); return; }
+  // eigener Lauf zuerst, danach die Testlisten im Hintergrund
+  let meldung = aktuell.pruefe(eigen), fall = null;
+  const tests = aktuell.tests ? aktuell.tests() : [];
+  if (!meldung){
+    for (const t of tests){
+      const r = lauf(t);
+      const m = r.fehler ? `Mit der Liste ${liste(t)} gibt es einen Fehler: ${r.fehler.replace(/^❌ /, '')}` : aktuell.pruefe(r);
+      if (m){ meldung = m; fall = t; break; }
+    }
+    lauf(null);
+  }
+  zeigeLauf();
+  if (meldung){
+    rueckmeldung('hinweis', 'Noch nicht ganz: ' + meldung + (fall ? ' <button class="fallknopf" id="fallZeigen">Diesen Fall abspielen</button>' : ''));
+    const k = document.getElementById('fallZeigen');
+    if (k) k.onclick = () => { lauf(fall); zeigeLauf(); };
+    return;
   }
   const ok = erledigt(); if (!ok.includes(aktuell.id)){ ok.push(aktuell.id); speicher.schreib('ok', JSON.stringify(ok)); }
   zeigeTabs();
-  lauf(tests.length > 1 ? erster : null); zeigeLauf();
   const naechste = AUFGABEN[AUFGABEN.indexOf(aktuell) + 1];
-  rueckmeldung(true, '✅ Richtig!' + (tests.length > 1 ? ` Alle ${tests.length} Tests bestanden.` : '') +
+  rueckmeldung('ok', '✅ Richtig!' + (tests.length ? " Auch mit anderen Listen getestet." : '') +
     (naechste && !naechste.frei ? ` <button class="weiter" id="weiterOk">Weiter zu ${naechste.challenge ? '🚀 ' : ''}${naechste.id} ▶</button>` : (naechste ? ' Sie haben alle Aufgaben gelöst.' : '')));
   const w = document.getElementById('weiterOk'); if (w) w.onclick = () => waehle(naechste.id);
 }
-$('pruefen').onclick = pruefen;
 $('run').onclick = ausfuehren;
 </script>
 
