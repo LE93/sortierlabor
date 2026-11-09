@@ -173,37 +173,37 @@ const AUFGABEN = [
 { id: 'A1', titel: 'Zwei Elemente tauschen', tempo: 2,
   text: '<p>Klicken Sie auf «Ausführen». Die Zeile im Code tauscht die Elemente an Position 1 und 2.</p><p>Ergänzen Sie eine Zeile, die zusätzlich die Elemente an Position 0 und 3 tauscht.</p>',
   tipps: [],
-  start: 'liste = Balken([4, 7, 1, 9, 3, 6])\n\nliste[1], liste[2] = liste[2], liste[1]\n\n\nprint(liste)\n',
+  start: 'liste = [4, 7, 1, 9, 3, 6]\n\nliste[1], liste[2] = liste[2], liste[1]\n\n\nprint(liste)\n',
   pruefe: r => liste(r.ende) === '[9, 1, 7, 4, 3, 6]' ? null : `Die Liste ist ${liste(r.ende)}, sie sollte [9, 1, 7, 4, 3, 6] sein.` },
 { id: 'A2', titel: 'Kaputter Tausch', tempo: 2,
   text: '<p>Dieser Code soll die Elemente an Position 1 und 2 tauschen. Führen Sie ihn aus. Was geht schief? Reparieren Sie ihn.</p>',
   tipps: ['Achten Sie auf den roten Balken: Was passiert in der ersten Zeile mit der 7?'],
-  start: 'liste = Balken([4, 7, 1, 9, 3, 6])\n\nliste[1] = liste[2]\nliste[2] = liste[1]\n\nprint(liste)\n',
+  start: 'liste = [4, 7, 1, 9, 3, 6]\n\nliste[1] = liste[2]\nliste[2] = liste[1]\n\nprint(liste)\n',
   pruefe: r => liste(r.ende) === '[4, 1, 7, 9, 3, 6]' ? null : `Die Liste ist ${liste(r.ende)}, sie sollte [4, 1, 7, 9, 3, 6] sein.` },
 { id: 'A3', titel: 'Nur tauschen, wenn nötig', tempo: 2,
   text: '<p>Tauschen Sie die Elemente an Position 0 und 1 nur dann, wenn sie in der falschen Reihenfolge stehen, also die grössere Zahl links ist.</p><p>Beim Ausführen wird Ihr Code auch mit anderen Listen getestet.</p>',
   tipps: ['Beginnen Sie mit <code>if liste[0] > liste[1]:</code>'],
-  start: 'liste = Balken([7, 2, 5, 1, 8, 3])\n\n\nprint(liste)\n',
+  start: 'liste = [7, 2, 5, 1, 8, 3]\n\n\nprint(liste)\n',
   tests: () => [[7, 2, 5, 1, 8, 3], [2, 7, 5, 1, 8, 3], [4, 4, 1, 2, 3, 5], [9, 1, 2, 3, 4, 5]],
   pruefe: r => { const e = r.start.slice(); if (e[0] > e[1]) [e[0], e[1]] = [e[1], e[0]];
     return liste(r.ende) === liste(e) ? null : `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}, richtig wäre ${liste(e)}.`; } },
 { id: 'A4', titel: 'Ein Durchgang', tempo: 4,
   text: '<p>Vergleichen Sie nacheinander alle Nachbarpaare: Position 0 und 1, dann 1 und 2, dann 2 und 3 und so weiter. Stehen zwei Nachbarn falsch, tauschen Sie sie.</p><p>Wo landet am Ende die grösste Zahl?</p>',
   tipps: ['<code>for i in range(len(liste) - 1):</code> Die Nachbarn sind dann <code>liste[i]</code> und <code>liste[i + 1]</code>.', 'Warum <code>- 1</code>? Das letzte Element hat keinen rechten Nachbarn.'],
-  start: 'liste = Balken([5, 2, 8, 1, 9, 3])\n\n\nprint(liste)\n',
+  start: 'liste = [5, 2, 8, 1, 9, 3]\n\n\nprint(liste)\n',
   tests: () => [[5, 2, 8, 1, 9, 3], zufall(7), zufall(8), [6, 5, 4, 3, 2, 1]],
   pruefe: r => { const e = einDurchgang(r.start);
     return liste(r.ende) === liste(e) ? null : `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Nach einem Durchgang wäre es ${liste(e)}.`; } },
 { id: 'A5', titel: 'Bubble Sort', tempo: 7,
   text: '<p>Nach einem Durchgang ist die Liste noch nicht sortiert. Kopieren Sie Ihre Schleife aus A4 und wiederholen Sie den Durchgang so oft, bis die Liste sicher sortiert ist.</p><p>Wie viele Durchgänge braucht es höchstens?</p>',
   tipps: ['Nach jedem Durchgang steht eine Zahl mehr ganz rechts am richtigen Platz.'],
-  start: 'liste = Balken([5, 2, 8, 1, 9, 3, 7, 4])\n\n# Kopieren Sie Ihre Schleife aus A4 hierher.\n\nprint(liste)\n',
+  start: 'liste = [5, 2, 8, 1, 9, 3, 7, 4]\n\n# Kopieren Sie Ihre Schleife aus A4 hierher.\n\nprint(liste)\n',
   tests: sortTests,
   pruefe: r => sortiert(r.ende) ? null : `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Das ist noch nicht sortiert.` },
 { id: 'A6', titel: 'Kürzere Durchgänge', challenge: true, tempo: 8, zaehler: true,
   text: '<p>Nach dem ersten Durchgang steht die grösste Zahl ganz rechts. Der zweite Durchgang muss also nicht mehr bis ganz nach hinten.</p><p>Verkürzen Sie die Durchgänge so, dass Ihr Bubble Sort möglichst wenige Vergleiche braucht. Beobachten Sie den Zähler.</p>',
   tipps: [],
-  start: 'liste = Balken([5, 2, 8, 1, 9, 3, 7, 4])\n\n# Kopieren Sie Ihren Bubble Sort aus A5 hierher.\n\nprint(liste)\n',
+  start: 'liste = [5, 2, 8, 1, 9, 3, 7, 4]\n\n# Kopieren Sie Ihren Bubble Sort aus A5 hierher.\n\nprint(liste)\n',
   tests: sortTests,
   pruefe: r => { const n = r.start.length, max = n * (n - 1) / 2;
     if (!sortiert(r.ende)) return `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Das ist noch nicht sortiert.`;
@@ -211,18 +211,21 @@ const AUFGABEN = [
 { id: 'A7', titel: 'Früher fertig', challenge: true, tempo: 8, zaehler: true,
   text: '<p>Ist die Liste schon vor dem letzten Durchgang sortiert, macht Ihr Bubble Sort trotzdem weiter. Bei einer bereits sortierten Liste ist das besonders ärgerlich.</p><p>Sorgen Sie dafür, dass er aufhört, sobald ein Durchgang nichts mehr tauscht.</p>',
   tipps: [],
-  start: 'liste = Balken([1, 2, 3, 4, 6, 5, 7, 8])\n\n# Kopieren Sie Ihren Bubble Sort aus A5 oder A6 hierher.\n\nprint(liste)\n',
+  start: 'liste = [1, 2, 3, 4, 6, 5, 7, 8]\n\n# Kopieren Sie Ihren Bubble Sort aus A5 oder A6 hierher.\n\nprint(liste)\n',
   tests: () => [[1, 2, 3, 4, 6, 5, 7, 8], [1, 2, 3, 4, 5, 6, 7, 8], zufall(8), [2, 1, 3, 4, 5, 6]],
   pruefe: r => { if (!sortiert(r.ende)) return `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Das ist noch nicht sortiert.`;
     const max = vergleicheMitAbbruch(r.start);
     return r.vgl <= max ? null : `Sortiert, aber mit ${liste(r.start)} braucht Ihr Code ${r.vgl} Vergleiche. Wer nach einem Durchgang ohne Tausch aufhört, braucht höchstens ${max}.`; } },
 { id: 'Frei', thema: 'Frei', titel: 'Freies Labor', tempo: 5, frei: true,
-  text: '<p>Hier können Sie beliebig ausprobieren. <code>Balken(10)</code> mischt die Zahlen 1 bis 10 zufällig.</p>',
-  tipps: [], start: 'liste = Balken(10)\n\n\nprint(liste)\n' },
+  text: '<p>Hier können Sie beliebig ausprobieren. Die erste Liste im Code wird als Balken gezeichnet.</p>',
+  tipps: [], start: 'liste = [8, 3, 10, 1, 6, 2, 9, 5, 7, 4]\n\n\nprint(liste)\n' },
 ];
 const $ = id => document.getElementById(id);
+// Die erste Liste im Code (liste = [...]) wird unsichtbar zu Balken([...]); so läuft derselbe Code auch in WebTigerPython
+const LISTE_RE = /^([ \t]*[A-Za-z_]\w*[ \t]*=[ \t]*)\[([-\d,\s]*)\]/m;
+const alsBalken = src => /\bBalken\s*\(/.test(src) ? src : src.replace(LISTE_RE, '$1Balken([$2])');
 const editor = CodeMirror.fromTextArea($('code'), {
-  mode: {name: 'python', version: 3, extra_keywords: ['repeat'], extra_builtins: ['Balken']},
+  mode: {name: 'python', version: 3, extra_keywords: ['repeat']},
   lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false,
   matchBrackets: true, autoCloseBrackets: true,
   extraKeys: {
@@ -239,8 +242,8 @@ const editor = CodeMirror.fromTextArea($('code'), {
 });
 let aktuell = AUFGABEN[0];
 const speicher = {
-  lies(k){ try { return localStorage.getItem('sortierlabor-v6-' + k); } catch (e) { return null; } },
-  schreib(k, v){ try { localStorage.setItem('sortierlabor-v6-' + k, v); } catch (e) {} }
+  lies(k){ try { return localStorage.getItem('sortierlabor-v7-' + k); } catch (e) { return null; } },
+  schreib(k, v){ try { localStorage.setItem('sortierlabor-v7-' + k, v); } catch (e) {} }
 };
 const gespeichert = {};
 function erledigt(){ try { return JSON.parse(speicher.lies('ok') || '[]'); } catch (e) { return []; } }
@@ -267,7 +270,7 @@ function waehle(id){
   $('feedback').hidden = true;
   $('tempo').value = aktuell.tempo;
   editor.setValue(gespeichert[aktuell.id] ?? speicher.lies('code-' + aktuell.id) ?? aktuell.start);
-  let z = 0; for (let k = 0; k < editor.lineCount(); k++){ if (/Balken\(/.test(editor.getLine(k))){ z = k + 1; break; } }
+  let z = 0; for (let k = 0; k < editor.lineCount(); k++){ if (LISTE_RE.test(editor.getLine(k))){ z = k + 1; break; } }
   editor.setCursor(Math.min(z, editor.lineCount() - 1), 0);
   zaehlerZeigen(); zeigeTabs(); vorschau();
 }
@@ -311,7 +314,7 @@ function zeichne(){
   const markiert = {};
   if (e.typ === 'vergleich'){ markiert[e.i] = 'cmp'; if (e.j !== null && e.j !== undefined) markiert[e.j] = 'cmp'; }
   if (e.typ === 'tausch'){ markiert[e.i] = 'swap'; markiert[e.j] = 'swap'; }
-  if (e.typ === 'setzen'){ markiert[e.i] = 'set'; }
+  if (e.typ === 'setzen' || e.typ === 'anfuegen'){ markiert[e.i] = 'set'; }
   const vorher = ev[pos - 1], vorwaerts = pos === letzterPos + 1 && vorher;
   const dauer = Math.min(verzoegerung() * 0.85, 700);
   const animieren = vorwaerts && n <= 40 && dauer >= 150 && !reduziert.matches;
@@ -343,7 +346,10 @@ function zeichne(){
     start: 'Start',
     vergleich: e.j !== null && e.j !== undefined ? `Vergleich: Position ${Math.min(e.i, e.j)} und ${Math.max(e.i, e.j)}` : `Vergleich: Position ${e.i}`,
     tausch: `Tausch: Position ${Math.min(e.i, e.j)} ↔ ${Math.max(e.i, e.j)}`,
-    setzen: `Position ${e.i} überschrieben mit ${e.werte[e.i]}`
+    setzen: `Position ${e.i} überschrieben mit ${e.werte[e.i]}`,
+    anfuegen: `Neues Element an Position ${e.i}: ${e.werte[e.i]}`,
+    entfernen: `Element an Position ${e.i} entfernt`,
+    umdrehen: 'Liste umgedreht'
   }[e.typ] || '';
   markiereZeile(e.zeile, 'zeile-aktiv');
   if (pos === ev.length - 1 && fehlerText){ st.textContent = fehlerText; st.classList.add('err'); if (fehlerZeile) markiereZeile(fehlerZeile, 'zeile-fehler'); }
@@ -386,14 +392,14 @@ const UEBERSETZUNG = [
   [/^ZeroDivisionError/, () => 'Division durch 0.'],
   [/^UnboundLocalError: .*'(\w+)'/, m => `«${m[1]}» wird benutzt, bevor es einen Wert hat.`],
 ];
-function typ(t){ return {Zahl: 'einer Zahl', int: 'einer Zahl', float: 'einer Kommazahl', str: 'einem Text', list: 'einer Liste', Balken: 'Balken', NoneType: 'None'}[t] || t; }
+function typ(t){ return {Zahl: 'einer Zahl', int: 'einer Zahl', float: 'einer Kommazahl', str: 'einem Text', list: 'einer Liste', Balken: 'einer Liste', NoneType: 'None'}[t] || t; }
 function uebersetze(f){
   for (const [re, fn] of UEBERSETZUNG){ const m = f.match(re); if (m) return fn(m); }
   return f;
 }
 function lauf(vorgabe){
   stopp(); ev = []; pos = 0; fehlerText = ''; fehlerZeile = 0; markiereZeile(0); $('out').textContent = '';
-  const src = editor.getValue().replace(/^(\s*)repeat\s+(.+?)\s*:/gm, '$1for _ in range($2):').replace(/^(\s*)repeat\s*:/gm, '$1while True:');
+  const src = alsBalken(editor.getValue()).replace(/^(\s*)repeat\s+(.+?)\s*:/gm, '$1for _ in range($2):').replace(/^(\s*)repeat\s*:/gm, '$1while True:');
   window.pyAusfuehren(src, vorgabe || []);
   const res = {ausgabe: window.pyAusgabe || '', fehler: window.pyFehler || ''};
   fehlerZeile = window.pyFehlerZeile || 0;
@@ -410,14 +416,14 @@ function lauf(vorgabe){
 function zeigeLauf(){
   if (fehlerZeile) editor.scrollIntoView({line: fehlerZeile - 1, ch: 0}, 60);
   if (!ev.length){
-    $('status').textContent = fehlerText || 'Keine Balken erstellt. Beginnen Sie mit liste = Balken([...]).';
+    $('status').textContent = fehlerText || 'Keine Liste gefunden. Beginnen Sie mit liste = [...].';
     $('status').classList.toggle('err', !!fehlerText); zeichne(); if (fehlerZeile) markiereZeile(fehlerZeile, 'zeile-fehler'); return;
   }
   start();
 }
 function vorschau(){
   stopp(); fehlerText = ''; fehlerZeile = 0; markiereZeile(0); $('out').textContent = '';
-  const m = editor.getValue().match(/Balken\(\s*\[([\d,\s]+)\]\s*\)/);
+  const m = alsBalken(editor.getValue()).match(/Balken\(\s*\[([-\d,\s]+)\]\s*\)/);
   ev = m ? [{typ: 'start', werte: m[1].split(',').map(x => parseInt(x)).filter(x => !isNaN(x)), vgl: 0, tausch: 0, zeile: 0}] : [];
   pos = 0; zeichne();
   $('status').classList.remove('err');
@@ -430,7 +436,7 @@ function ausfuehren(){
   $('feedback').hidden = true;
   const eigen = lauf(null);
   if (aktuell.frei || eigen.fehler){ zeigeLauf(); return; }
-  if (!eigen.ende){ zeigeLauf(); rueckmeldung('hinweis', 'Es wurden keine Balken erstellt. Die erste Zeile muss <code>liste = Balken([...])</code> bleiben.'); return; }
+  if (!eigen.ende){ zeigeLauf(); rueckmeldung('hinweis', 'Keine Liste gefunden. Die erste Zeile muss <code>liste = [...]</code> bleiben.'); return; }
   // eigener Lauf zuerst, danach die Testlisten im Hintergrund
   let meldung = aktuell.pruefe(eigen), fall = null;
   const tests = aktuell.tests ? aktuell.tests() : [];
@@ -556,6 +562,61 @@ class Balken:
         for k in range(len(self._w)):
             yield Zahl(self._w[k], k, self)
 
+    # damit sich Balken wie eine normale Liste verhält
+    def __contains__(self, x):
+        return int(x) in self._w
+    def __eq__(self, o):
+        if isinstance(o, Balken):
+            return self._w == o._w
+        if isinstance(o, list):
+            return self._w == [int(x) for x in o]
+        return False
+    def __ne__(self, o):
+        return not self.__eq__(o)
+    def __add__(self, o):
+        return list(self._w) + list(o)
+    def __radd__(self, o):
+        return list(o) + list(self._w)
+    def __mul__(self, k):
+        return list(self._w) * k
+    def append(self, x):
+        self._letztes = None
+        self._w.append(int(x))
+        self._melde('anfuegen', len(self._w) - 1, None)
+    def insert(self, i, x):
+        n = len(self._w)
+        i = int(i)
+        k = max(0, min(n, i + n if i < 0 else i))
+        self._letztes = None
+        self._w.insert(k, int(x))
+        self._melde('anfuegen', k, None)
+    def pop(self, i=-1):
+        k = self._index(i)
+        self._letztes = None
+        x = self._w.pop(k)
+        self._melde('entfernen', k, None)
+        return x
+    def __delitem__(self, i):
+        self.pop(i)
+    def remove(self, x):
+        if int(x) not in self._w:
+            raise ValueError(str(int(x)) + " ist nicht in der Liste.")
+        self.pop(self._w.index(int(x)))
+    def index(self, x):
+        if int(x) not in self._w:
+            raise ValueError(str(int(x)) + " ist nicht in der Liste.")
+        return self._w.index(int(x))
+    def count(self, x):
+        return self._w.count(int(x))
+    def copy(self):
+        return list(self._w)
+    def reverse(self):
+        self._letztes = None
+        self._w.reverse()
+        self._melde('umdrehen', None, None)
+    def sort(self, *a, **k):
+        raise Abbruch("liste.sort() ist im Sortierlabor ausgeschaltet. Hier sortieren Sie selbst!")
+
     def __repr__(self):
         return str(self._w)
 
@@ -578,6 +639,11 @@ class Ausgabe:
 
 VORGABE = [None]
 
+def sortiert(werte, *a, **k):
+    if isinstance(werte, Balken):
+        raise Abbruch("sorted() ist im Sortierlabor ausgeschaltet. Hier sortieren Sie selbst!")
+    return sorted(werte, *a, **k)
+
 def py_ausfuehren(src, vorgabe=None):
     w = [int(x) for x in vorgabe]
     VORGABE[0] = w if len(w) > 0 else None
@@ -587,7 +653,7 @@ def py_ausfuehren(src, vorgabe=None):
     fehler = ""
     zeile_f = 0
     try:
-        exec(src, {"Balken": Balken, "print": drucke, "__name__": "__main__"})
+        exec(src, {"Balken": Balken, "print": drucke, "sorted": sortiert, "__name__": "__main__"})
     except Abbruch as e:
         fehler = str(e)
         zeile_f = benutzerzeile_aus(e)
