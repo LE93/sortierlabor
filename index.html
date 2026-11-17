@@ -43,6 +43,14 @@ button.primary{background:var(--bar);border-color:var(--bar);color:#fff;font-wei
 button:disabled{opacity:.45;cursor:default}
 textarea{width:100%;box-sizing:border-box;min-height:340px;resize:vertical;font-family:var(--mono);font-size:14px;line-height:1.5;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);color:var(--ink);tab-size:4;white-space:pre;overflow:auto}
 .stage{height:260px;display:flex;align-items:flex-end;gap:6px;padding:8px 4px 0;border-bottom:2px solid var(--line);position:relative}
+.stage.multi{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;align-items:stretch;height:auto;min-height:260px;gap:12px;border-bottom:none;padding:4px 0 0}
+.mzeile{display:grid;grid-template-columns:64px minmax(0,1fr);column-gap:10px;row-gap:2px}
+.mname{grid-row:1/3;align-self:center;font-family:var(--mono);font-weight:600;font-size:.9rem;overflow:hidden;text-overflow:ellipsis}
+.mzeile.leer .mname{color:var(--muted);opacity:.55}
+.mbalken{display:grid;grid-auto-rows:62px;align-items:end;gap:4px;border-bottom:2px solid var(--line)}
+.mbalken .bar{height:100%}
+.bar.add{background:var(--swap)} .bar.weg{opacity:.3}
+.mwerte{display:grid;gap:4px;font-family:var(--mono);font-size:.8rem;text-align:center;font-variant-numeric:tabular-nums;min-height:1.2em}
 .bar{flex:1;min-width:0;background:var(--bar);border-radius:4px 4px 0 0;position:relative;transition:height .18s ease,background-color .18s}
 .bar.cmp{background:var(--cmp)} .bar.swap{background:var(--swap)} .bar.set{background:var(--set)}
 .labels{display:flex;gap:6px;padding:0 4px}
@@ -133,8 +141,10 @@ button.ghost{border-color:transparent;color:var(--muted)}
       <div class="labels idx" id="idx"></div>
       <div class="legend">
         <span><i class="dot" style="background:var(--cmp)"></i>verglichen</span>
-        <span><i class="dot" style="background:var(--swap)"></i>getauscht</span>
-        <span><i class="dot" style="background:var(--set)"></i>überschrieben</span>
+        <span class="nur-einzeln"><i class="dot" style="background:var(--swap)"></i>getauscht</span>
+        <span class="nur-einzeln"><i class="dot" style="background:var(--set)"></i>überschrieben</span>
+        <span class="nur-mehrere" hidden><i class="dot" style="background:var(--swap)"></i>angehängt</span>
+        <span class="nur-mehrere" hidden><i class="dot" style="background:var(--bar);opacity:.3"></i>schon verwendet</span>
       </div>
       <div class="status" id="status" role="status">Bereit.</div>
       <div class="row">
@@ -177,6 +187,22 @@ function noetigeTausche(a){ a = a.slice(); let t = 0;
   for (let s = 0; s < a.length - 1; s++){ let m = s; for (let i = s + 1; i < a.length; i++) if (a[i] < a[m]) m = i; if (m !== s){ [a[s], a[m]] = [a[m], a[s]]; t++; } } return t; }
 const minIndex = a => a.indexOf(Math.min(...a));
 const sortTests = () => [zufall(8), [8, 7, 6, 5, 4, 3, 2, 1], [1, 2, 3, 4, 5, 6], [3, 1, 3, 2, 1], zufall(10)];
+
+const mergeTests = () => [{links: [1, 3, 5], rechts: [2, 4, 6]}, {links: [1, 2, 3], rechts: [4, 5, 6, 7]}, {links: [5, 6, 7, 8], rechts: [1, 2]}, {links: [2, 2, 7], rechts: [2, 3]}, {links: [4], rechts: [1, 2, 3, 5]}];
+const fallText = t => Array.isArray(t) ? 'der Liste ' + liste(t) : Object.entries(t).map(([k, v]) => k + ' = ' + liste(v)).join(' und ');
+function mergePruefen(r, zaehlen){
+  const L = r.anfang.find(x => x.name === 'links'), R = r.anfang.find(x => x.name === 'rechts');
+  if (!L || !R) return 'Die ersten zwei Zeilen müssen <code>links = [...]</code> und <code>rechts = [...]</code> bleiben.';
+  const soll = [...L.werte, ...R.werte].sort((a, b) => a - b), n = soll.length;
+  const aus = (r.ausgabe || '').split('\n').map(z => z.trim()), ist = aus.filter(z => z.startsWith('[')).pop();
+  if (ist !== liste(soll)) return `Mit links = ${liste(L.werte)} und rechts = ${liste(R.werte)} printet Ihr Code ${ist || 'keine Liste'}, richtig wäre ${liste(soll)}.`;
+  if (r.vgl > n - 1) return `Richtig zusammengeführt, aber mit ${r.vgl} Vergleichen. Bei ${n} Zahlen geht es mit höchstens ${n - 1}.`;
+  if (!zaehlen) return null;
+  const zahlen = aus.filter(z => /^\d+$/.test(z));
+  if (!zahlen.length) return 'Ihr Code printet noch keine Anzahl Vergleiche.';
+  const z = +zahlen.pop();
+  return z === r.vgl ? null : `Mit links = ${liste(L.werte)} und rechts = ${liste(R.werte)} printet Ihr Code ${z} Vergleiche, das Labor hat ${r.vgl} gezählt.`;
+}
 
 const THEMA_STANDARD = 'Bubble Sort';
 const AUFGABEN = [
@@ -271,14 +297,28 @@ const AUFGABEN = [
   pruefe: r => { if (!sortiert(r.ende)) return `Mit ${liste(r.start)} ergibt Ihr Code ${liste(r.ende)}. Das ist noch nicht sortiert.`;
     const soll = noetigeTausche(r.start);
     return r.schreiben <= 2 * soll ? null : `Sortiert, aber mit ${liste(r.start)} wird unnötig getauscht. Nötig ${soll === 1 ? 'ist nur 1 Vertauschung' : 'sind nur ' + soll + ' Vertauschungen'}.`; } },
+{ id: 'M1', thema: 'Merge Sort', titel: 'Zusammenführen', tempo: 4, zaehler: true, mehrere: true,
+  text: '<p>Programmieren Sie die Funktion <code>merge(links, rechts)</code>. Sie bekommt zwei sortierte Listen und gibt eine neue sortierte Liste mit allen Zahlen zurück.</p><p>Beim Ausführen wird Ihr Code auch mit anderen Listen getestet.</p>',
+  tipps: ['<code>l</code> zeigt auf die kleinste noch nicht verwendete Zahl in <code>links</code>, <code>r</code> auf die in <code>rechts</code>. Vergleichen Sie <code>links[l]</code> und <code>rechts[r]</code>.', 'Ist eine Liste aufgebraucht, hängen Sie den Rest der anderen an, zum Beispiel mit <code>for k in range(l, len(links)):</code>'],
+  start: 'links = [2, 5, 8, 9]\nrechts = [3, 4, 6, 7]\n\ndef merge(links, rechts):\n    neu = []\n    l = 0\n    r = 0\n\n\n    return neu\n\nprint(merge(links, rechts))\n',
+  tests: mergeTests,
+  pruefe: r => mergePruefen(r, false) },
+{ id: 'M2', thema: 'Merge Sort', titel: 'Vergleiche zählen', challenge: true, tempo: 4, zaehler: true, mehrere: true,
+  text: '<p>Zählen Sie in <code>merge</code> mit einer Variable <code>vergleiche</code>, wie oft zwei Zahlen verglichen werden. Printen Sie die Anzahl.</p><p>Stimmt Ihre Zahl mit dem Zähler des Labors überein?</p>',
+  tipps: [],
+  start: 'links = [2, 5, 8, 9]\nrechts = [3, 4, 6, 7]\n\n# Kopieren Sie Ihre Funktion merge aus M1 hierher.\n\nprint(merge(links, rechts))\n',
+  tests: mergeTests,
+  pruefe: r => mergePruefen(r, true) },
 { id: 'Frei', thema: 'Frei', titel: 'Freies Labor', tempo: 5, frei: true,
   text: '<p>Hier können Sie beliebig ausprobieren. Die erste Liste im Code wird als Balken gezeichnet.</p>',
   tipps: [], start: 'liste = [8, 3, 10, 1, 6, 2, 9, 5, 7, 4]\n\n\nprint(liste)\n' },
 ];
 const $ = id => document.getElementById(id);
 // Die erste Liste im Code (liste = [...]) wird unsichtbar zu Balken([...]); so läuft derselbe Code auch in WebTigerPython
-const LISTE_RE = /^([ \t]*[A-Za-z_]\w*[ \t]*=[ \t]*)\[([-\d,\s]*)\]/m;
-const alsBalken = src => /\bBalken\s*\(/.test(src) ? src : src.replace(LISTE_RE, '$1Balken([$2])');
+const LISTE_RE = /^([ \t]*)([A-Za-z_]\w*)([ \t]*=[ \t]*)\[([-\d,\s]*)\]/m;
+const LISTE_RE_ALLE = new RegExp(LISTE_RE.source, 'gm');
+// bei Aufgaben mit mehreren Listen (merge) wird jede Liste im Code gezeichnet
+const alsBalken = src => /\bBalken\s*\(/.test(src) ? src : src.replace(aktuell && aktuell.mehrere ? LISTE_RE_ALLE : LISTE_RE, '$1$2$3Balken([$4], "$2")');
 const editor = CodeMirror.fromTextArea($('code'), {
   mode: {name: 'python', version: 3, extra_keywords: ['repeat']},
   lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false,
@@ -320,7 +360,10 @@ function zeigeTabs(){
 $('wahl').onchange = e => waehle(e.target.value);
 $('zurueck').onclick = () => { const S = sichtbar(), k = S.indexOf(aktuell); if (k > 0) waehle(S[k - 1].id); };
 $('weiter').onclick = () => { const S = sichtbar(), k = S.indexOf(aktuell); if (k < S.length - 1) waehle(S[k + 1].id); };
-function zaehlerZeigen(){ $('zaehler').hidden = !(aktuell.zaehler || hatHash('zaehler')); }
+function zaehlerZeigen(){ $('zaehler').hidden = !(aktuell.zaehler || hatHash('zaehler'));
+  $('ntausch').parentElement.hidden = !!aktuell.mehrere;
+  document.querySelectorAll('.nur-einzeln').forEach(x => { x.hidden = !!aktuell.mehrere; });
+  document.querySelectorAll('.nur-mehrere').forEach(x => { x.hidden = !aktuell.mehrere; }); }
 let bereit = false;
 function waehle(id){
   if (bereit){ gespeichert[aktuell.id] = editor.getValue(); speicher.schreib('code-' + aktuell.id, editor.getValue()); }
@@ -354,15 +397,49 @@ function benutzerZeile(){
   } catch (e) {}
   return 0;
 }
-window.aufzeichnen = (typ, werte, i, j, vgl, tausch) => {
+// zust: "name:1,2,3;name2:4,5", mk: "liste,index,klasse;..."
+window.aufzeichnen = (typ, zust, mk, vgl, tausch) => {
   const zeile = benutzerZeile();
-  ev.push({typ, werte: Array.from(werte), i, j, vgl, tausch, zeile});
+  const listen = zust.split(';').map(t => { const [name, w, weg] = t.split(':'); return {name, werte: w ? w.split(',').map(Number) : [], weg: weg ? weg.split(',').map(Number) : []}; });
+  const m = mk ? mk.split(';').map(t => { const [l, k, c] = t.split(','); return [+l, +k, c]; }) : [];
+  const m0 = m.filter(x => x[0] === 0);
+  if (listen.length === 1 && !(aktuell && aktuell.mehrere)) m.forEach(x => { if (x[2] === 'add') x[2] = 'set'; });
+  ev.push({typ, listen, m, werte: listen[0].werte, i: m0[0] ? m0[0][1] : null, j: m0[1] ? m0[1][1] : null, vgl, tausch, zeile});
 };
+// Umfang eines Laufs: alle Listen, längste Liste, grösster Wert (für gleich breite Balken in allen Zeilen)
+let umfang = {von: null};
+function laufUmfang(){
+  if (umfang.von === ev && umfang.n === ev.length) return umfang;
+  let namen = [], slots = 1, max = 1;
+  ev.forEach(e => { if (e.listen.length > namen.length) namen = e.listen.map(x => x.name);
+    e.listen.forEach(x => { slots = Math.max(slots, x.werte.length); max = Math.max(max, ...x.werte); }); });
+  if (aktuell && aktuell.mehrere && ev.length) slots = Math.max(slots, ev[0].listen.reduce((t, x) => t + x.werte.length, 0));
+  return umfang = {von: ev, n: ev.length, namen, slots, max};
+}
+const mehrfach = e => (aktuell && aktuell.mehrere) || e.listen.length > 1;
+function zeichneMehrere(e){
+  const stage = $('stage'), U = laufUmfang(), S = U.slots, spalten = `grid-template-columns:repeat(${S},minmax(0,1fr))`;
+  $('vals').innerHTML = ''; $('idx').innerHTML = ''; $('vals').hidden = true; $('idx').hidden = true;
+  stage.classList.add('multi'); stage.style.gap = '';
+  const markiert = {}; e.listen.forEach((L, l) => (L.weg || []).forEach(k => { markiert[l + '_' + k] = 'weg'; }));
+  e.m.forEach(([l, k, c]) => { if (c !== 'x') markiert[l + '_' + k] = c; });
+  let html = '';
+  for (let l = 0; l < Math.max(U.namen.length, e.listen.length); l++){
+    const L = e.listen[l], name = L ? L.name : U.namen[l], w = L ? L.werte : [];
+    html += `<div class="mzeile${L ? '' : ' leer'}"><div class="mname">${name}</div><div class="mbalken" style="${spalten}">` +
+      (w.length ? w.map((x, k) => `<div class="bar${markiert[l + '_' + k] ? ' ' + markiert[l + '_' + k] : ''}" style="height:${Math.max(x, 0) / U.max * 100}%"></div>`).join('') : '<div></div>') +
+      `</div><div class="mwerte" style="${spalten}">` + (S <= 24 ? w.map(x => `<div>${x}</div>`).join('') : '') + '</div></div>';
+  }
+  stage.innerHTML = html;
+}
 
 function zeichne(){
   const e = ev[pos];
   const stage = $('stage'), vals = $('vals'), idx = $('idx');
-  if (!e){ stage.innerHTML = ''; vals.innerHTML = ''; idx.innerHTML = ''; return; }
+  if (!e){ stage.classList.remove('multi'); stage.innerHTML = ''; vals.innerHTML = ''; idx.innerHTML = ''; return; }
+  const multi = mehrfach(e);
+  if (multi) zeichneMehrere(e); else {
+  if (stage.classList.contains('multi')){ stage.classList.remove('multi'); stage.innerHTML = ''; }
   const max = Math.max(1, ...e.werte);
   if (stage.children.length !== e.werte.length){
     stage.innerHTML = e.werte.map(() => '<div class="bar"></div>').join('');
@@ -375,7 +452,7 @@ function zeichne(){
   const markiert = {};
   if (e.typ === 'vergleich'){ markiert[e.i] = 'cmp'; if (e.j !== null && e.j !== undefined) markiert[e.j] = 'cmp'; }
   if (e.typ === 'tausch'){ markiert[e.i] = 'swap'; markiert[e.j] = 'swap'; }
-  if (e.typ === 'setzen' || e.typ === 'anfuegen'){ markiert[e.i] = 'set'; }
+  if (e.typ === 'setzen' || e.typ === 'anfuegen'){ markiert[e.i] = 'set'; }  // einzelne Liste: angefügt = rot wie bisher
   const vorher = ev[pos - 1], vorwaerts = pos === letzterPos + 1 && vorher;
   const dauer = Math.min(verzoegerung() * 0.85, 700);
   const animieren = vorwaerts && n <= 40 && dauer >= 150 && !reduziert.matches;
@@ -399,6 +476,7 @@ function zeichne(){
       if (!vals.hidden) vals.children[k].animate([{transform: `translateX(${von}px)`}, {transform: 'translateX(0)'}], {duration: dauer, easing: 'ease-in-out'});
     });
   }
+  }
   letzterPos = pos;
   $('nvgl').textContent = e.vgl; $('ntausch').textContent = e.tausch;
   $('nschritt').textContent = `${pos} / ${ev.length - 1}`;
@@ -412,6 +490,12 @@ function zeichne(){
     entfernen: `Element an Position ${e.i} entfernt`,
     umdrehen: 'Liste umgedreht'
   }[e.typ] || '';
+  if (multi){ const nm = ([l, k]) => `${e.listen[l].name}[${k}]`;
+    st.textContent = {start: 'Start', liste: `Neue Liste ${e.listen[e.listen.length - 1].name}`,
+      vergleich: e.m.length > 1 ? `Vergleich: ${nm(e.m[0])} und ${nm(e.m[1])}` : e.m.length ? `Vergleich: ${nm(e.m[0])}` : 'Vergleich',
+      anfuegen: e.m.length ? `${e.listen[e.m[0][0]].name}: neues Element ${e.listen[e.m[0][0]].werte[e.m[0][1]]}` : '',
+      setzen: e.m.length ? `${nm(e.m[0])} überschrieben` : '', tausch: e.m.length > 1 ? `Tausch: ${nm(e.m[0])} ↔ ${nm(e.m[1])}` : '',
+      entfernen: e.m.length ? `${nm(e.m[0])} entfernt` : '', umdrehen: 'Liste umgedreht'}[e.typ] || ''; }
   markiereZeile(e.zeile, 'zeile-aktiv');
   if (pos === ev.length - 1 && fehlerText){ st.textContent = fehlerText; st.classList.add('err'); if (fehlerZeile) markiereZeile(fehlerZeile, 'zeile-fehler'); }
 }
@@ -461,7 +545,9 @@ function uebersetze(f){
 function lauf(vorgabe){
   stopp(); ev = []; pos = 0; fehlerText = ''; fehlerZeile = 0; markiereZeile(0); $('out').textContent = '';
   const src = alsBalken(editor.getValue()).replace(/^(\s*)repeat\s+(.+?)\s*:/gm, '$1for _ in range($2):').replace(/^(\s*)repeat\s*:/gm, '$1while True:');
-  window.pyAusfuehren(src, vorgabe || []);
+  const erste = Array.isArray(vorgabe) ? vorgabe.join(',') : '';
+  const namen = vorgabe && !Array.isArray(vorgabe) ? Object.entries(vorgabe).map(([k, v]) => k + ':' + v.join(',')).join(';') : '';
+  window.pyAusfuehren(src, erste, namen);
   const res = {ausgabe: window.pyAusgabe || '', fehler: window.pyFehler || ''};
   fehlerZeile = window.pyFehlerZeile || 0;
   while (fehlerZeile > 1 && (fehlerZeile > editor.lineCount() || !editor.getLine(fehlerZeile - 1).trim())) fehlerZeile--;
@@ -472,7 +558,9 @@ function lauf(vorgabe){
     if (!abbruch) $('out').textContent += (res.ausgabe && !res.ausgabe.endsWith('\n') ? '\n' : '') + res.fehler + (fehlerZeile ? ` (Zeile ${fehlerZeile})` : '');
   }
   const letzt = ev[ev.length - 1];
-  return {fehler: fehlerText, start: ev.length ? ev[0].werte : null, ende: letzt ? letzt.werte : null, vgl: letzt ? letzt.vgl : 0, tausch: letzt ? letzt.tausch : 0,
+  const anfang = [];
+  ev.forEach(e => e.listen.forEach((x, l) => { if (!anfang[l]) anfang[l] = {name: x.name, werte: x.werte}; }));
+  return {anfang, fehler: fehlerText, start: ev.length ? ev[0].werte : null, ende: letzt ? letzt.werte : null, vgl: letzt ? letzt.vgl : 0, tausch: letzt ? letzt.tausch : 0,
     schreiben: ev.filter(e => e.typ === 'setzen').length + 2 * (letzt ? letzt.tausch : 0), ausgabe: res.ausgabe};
 }
 function zeigeLauf(){
@@ -485,8 +573,10 @@ function zeigeLauf(){
 }
 function vorschau(){
   stopp(); fehlerText = ''; fehlerZeile = 0; markiereZeile(0); $('out').textContent = '';
-  const m = alsBalken(editor.getValue()).match(/Balken\(\s*\[([-\d,\s]+)\]\s*\)/);
-  ev = m ? [{typ: 'start', werte: m[1].split(',').map(x => parseInt(x)).filter(x => !isNaN(x)), vgl: 0, tausch: 0, zeile: 0}] : [];
+  const listen = [...alsBalken(editor.getValue()).matchAll(/Balken\(\s*\[([-\d,\s]*)\]\s*(?:,\s*"(\w+)"\s*)?\)/g)]
+    .map(m => ({name: m[2] || 'liste', werte: m[1].split(',').map(x => parseInt(x)).filter(x => !isNaN(x))}));
+  if (!(aktuell && aktuell.mehrere)) listen.splice(1);
+  ev = listen.length ? [{typ: 'start', listen, m: [], werte: listen[0].werte, i: null, j: null, vgl: 0, tausch: 0, zeile: 0}] : [];
   pos = 0; zeichne();
   $('status').classList.remove('err');
   $('status').textContent = 'Klicken Sie auf «Ausführen».';
@@ -505,7 +595,7 @@ function ausfuehren(){
   if (!meldung){
     for (const t of tests){
       const r = lauf(t);
-      const m = r.fehler ? `Mit der Liste ${liste(t)} gibt es einen Fehler: ${r.fehler.replace(/^❌ /, '')}` : aktuell.pruefe(r);
+      const m = r.fehler ? `Mit ${fallText(t)} gibt es einen Fehler: ${r.fehler.replace(/^❌ /, '')}` : aktuell.pruefe(r);
       if (m){ meldung = m; fall = t; break; }
     }
     lauf(null);
@@ -543,8 +633,12 @@ class Zahl(int):
         o.quelle = quelle
         return o
     def _vgl(self, other, ergebnis):
-        j = other.idx if isinstance(other, Zahl) and other.quelle is self.quelle else None
-        self.quelle._vergleich(self.idx, j)
+        if isinstance(other, Zahl) and other.quelle is self.quelle:
+            self.quelle._vergleich(self.idx, other.idx, None)
+        elif isinstance(other, Zahl):
+            self.quelle._vergleich(self.idx, None, other)
+        else:
+            self.quelle._vergleich(self.idx, None, None)
         return ergebnis
     def __lt__(self, o): return self._vgl(o, int(self) < int(o))
     def __le__(self, o): return self._vgl(o, int(self) <= int(o))
@@ -558,9 +652,14 @@ class Zahl(int):
     def __ne__(self, o): return not self.__eq__(o)
     def __hash__(self): return int.__hash__(int(self))
 
+# gemeinsamer Zustand aller Listen eines Laufs
+Z = {"vgl": 0, "tausch": 0, "n": 0, "listen": []}
+
 class Balken:
-    def __init__(self, werte):
-        if VORGABE[0] is not None:
+    def __init__(self, werte, name="liste"):
+        if name in VORGABE_NAMEN:
+            werte = VORGABE_NAMEN.pop(name)
+        elif VORGABE[0] is not None:
             werte = VORGABE[0]
             VORGABE[0] = None
         if isinstance(werte, int):
@@ -570,22 +669,31 @@ class Balken:
                 m = int(window.Math.random() * (k + 1))
                 werte[k], werte[m] = werte[m], werte[k]
         self._w = [int(x) for x in werte]
-        self._vgl = 0
-        self._tausch = 0
+        self.name = str(name)
         self._letztes = None
-        self._n = 0
-        self._melde('start', None, None)
+        self._weg = set()
+        self.nr = len(Z["listen"])
+        Z["listen"].append(self)
+        self._melde('start' if self.nr == 0 else 'liste', [])
 
-    def _melde(self, typ, i, j):
-        self._n += 1
-        if self._n > GRENZE:
+    def _melde(self, typ, marken):
+        Z["n"] += 1
+        if Z["n"] > GRENZE:
             raise Abbruch("Mehr als 5000 Schritte. Haben Sie eine Endlosschleife?")
-        window.aufzeichnen(typ, list(self._w), i, j, self._vgl, self._tausch)
+        zust = ";".join(b.name + ":" + ",".join(str(x) for x in b._w) + ":" + ",".join(str(k) for k in b._weg) for b in Z["listen"])
+        mk = ";".join(str(b.nr) + "," + str(k) + "," + c for (b, k, c) in marken)
+        window.aufzeichnen(typ, zust, mk, Z["vgl"], Z["tausch"])
 
-    def _vergleich(self, i, j):
-        self._vgl += 1
+    def _vergleich(self, i, j, andere):
+        Z["vgl"] += 1
         self._letztes = None
-        self._melde('vergleich', i, j)
+        marken = [(self, i, 'cmp')]
+        if j is not None:
+            marken.append((self, j, 'cmp'))
+        if andere is not None:
+            andere.quelle._letztes = None
+            marken.append((andere.quelle, andere.idx, 'cmp'))
+        self._melde('vergleich', marken)
 
     def _index(self, i):
         if not isinstance(i, int):
@@ -612,14 +720,14 @@ class Balken:
         l = self._letztes
         if l is not None and l[0] != k and l[1] == alt and l[2] == wert:
             # zweite Hälfte von a[i], a[j] = a[j], a[i]: als ein Tausch zählen
-            self._tausch += 1
+            Z["tausch"] += 1
             window.evPop()
-            self._n -= 1
+            Z["n"] -= 1
             self._letztes = None
-            self._melde('tausch', l[0], k)
+            self._melde('tausch', [(self, l[0], 'swap'), (self, k, 'swap')])
         else:
             self._letztes = (k, wert, alt)
-            self._melde('setzen', k, None)
+            self._melde('setzen', [(self, k, 'set')])
 
     def __iter__(self):
         for k in range(len(self._w)):
@@ -643,21 +751,30 @@ class Balken:
     def __mul__(self, k):
         return list(self._w) * k
     def append(self, x):
+        if isinstance(x, Zahl) and x.quelle is not self:
+            x.quelle._weg.add(x.idx)
         self._letztes = None
         self._w.append(int(x))
-        self._melde('anfuegen', len(self._w) - 1, None)
+        self._melde('anfuegen', [(self, len(self._w) - 1, 'add')])
+    def extend(self, xs):
+        for x in list(xs):
+            self.append(x)
+    def __iadd__(self, xs):
+        self.extend(xs)
+        return self
     def insert(self, i, x):
         n = len(self._w)
         i = int(i)
         k = max(0, min(n, i + n if i < 0 else i))
         self._letztes = None
         self._w.insert(k, int(x))
-        self._melde('anfuegen', k, None)
+        self._melde('anfuegen', [(self, k, 'add')])
     def pop(self, i=-1):
         k = self._index(i)
         self._letztes = None
         x = self._w.pop(k)
-        self._melde('entfernen', k, None)
+        self._weg = set()
+        self._melde('entfernen', [(self, k, 'x')])
         return x
     def __delitem__(self, i):
         self.pop(i)
@@ -676,7 +793,7 @@ class Balken:
     def reverse(self):
         self._letztes = None
         self._w.reverse()
-        self._melde('umdrehen', None, None)
+        self._melde('umdrehen', [])
     def sort(self, *a, **k):
         raise Abbruch("liste.sort() ist im Sortierlabor ausgeschaltet. Hier sortieren Sie selbst!")
 
@@ -701,15 +818,24 @@ class Ausgabe:
         pass
 
 VORGABE = [None]
+VORGABE_NAMEN = {}
 
 def sortiert(werte, *a, **k):
     if isinstance(werte, Balken):
         raise Abbruch("sorted() ist im Sortierlabor ausgeschaltet. Hier sortieren Sie selbst!")
     return sorted(werte, *a, **k)
 
-def py_ausfuehren(src, vorgabe=None):
-    w = [int(x) for x in vorgabe]
-    VORGABE[0] = w if len(w) > 0 else None
+def py_ausfuehren(src, erste="", namen=""):
+    Z["vgl"] = 0
+    Z["tausch"] = 0
+    Z["n"] = 0
+    Z["listen"] = []
+    VORGABE[0] = [int(x) for x in erste.split(",")] if erste else None
+    VORGABE_NAMEN.clear()
+    if namen:
+        for teil in namen.split(";"):
+            k, w = teil.split(":")
+            VORGABE_NAMEN[k] = [int(x) for x in w.split(",")] if w else []
     aus = Ausgabe()
     def drucke(*args, sep=" ", end="\n"):
         aus.write(sep.join(str(a) for a in args) + end)
