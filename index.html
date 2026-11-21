@@ -344,10 +344,10 @@ const editor = CodeMirror.fromTextArea($('code'), {
   }
 });
 let aktuell = AUFGABEN[0];
-// Selection Sort ist versteckt, bis 🚀 A9 gelöst ist oder die URL #selection enthält
+// Selection Sort ist immer sichtbar (früher erst nach 🚀 A9 oder mit #selection)
 const FREISCHALTEN = {thema: 'Selection Sort', nach: 'A9', hash: 'selection'};
 function hatHash(w){ return location.hash.slice(1).split(/[+&,]/).includes(w); }
-function freigeschaltet(){ return hatHash(FREISCHALTEN.hash) || erledigt().includes(FREISCHALTEN.nach); }
+function freigeschaltet(){ return true; }
 // Aufgaben mit nurMitHash erscheinen nur über ihren eigenen Link (z. B. #fehler)
 function sichtbar(){ const f = freigeschaltet(); return AUFGABEN.filter(a => (f || a.thema !== FREISCHALTEN.thema) && (!a.nurMitHash || hatHash(a.nurMitHash))); }
 const speicher = {
